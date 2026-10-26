@@ -1,7 +1,6 @@
 # Base de datos de alojamientos — PPI, versión 1
 
-Material inicial para cuatro integrantes. No incluye la aplicación PHP ni modifica el hosting.
-
+Material inicial para cuatro integrantes. 
 ## 1. Decisiones incorporadas
 
 - MariaDB 10.4 o posterior como destino inicial, tablas InnoDB y texto utf8mb4.
