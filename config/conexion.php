@@ -17,7 +17,7 @@ try {
         $config['usuario'],
         $config['clave'],
         $config['base_datos'],
-        $config['puerto']
+        3306
     );
 
     $conexion->set_charset('utf8mb4');
