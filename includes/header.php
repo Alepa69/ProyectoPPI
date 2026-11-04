@@ -9,7 +9,6 @@
 </head>
 <body>
 
-    <!-- Barra de navegación con enlaces dinámicos -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm mb-4">
         <div class="container">
             <a class="navbar-brand fw-bold" href="index.php">🏡 Airbnb Temu</a>
