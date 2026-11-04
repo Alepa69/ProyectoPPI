@@ -17,26 +17,11 @@ where a.estado = 'publicado'
 order by a.creado_en DESC";
 
 $resultado = $conexion->query($sql);
-$pageTitle='Menu principal';
+$pageTitle = 'Menu principal'; // Definido una sola vez aquí adentro
 ?>
 
-<!DOCTYPE html>
-<html lang="es">
+<?php include __DIR__ . '/includes/header.php'; ?>
 
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Airbnb Temu</title>
-
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-   
-    body { background-color: #f8f9fa; }
-  </style>
-</head>
-
-<body>
-  <div class="container my-4">
     <div>
       <h2>Casas disponibles</h2>
       <aside>
@@ -65,10 +50,5 @@ $pageTitle='Menu principal';
 <!--mapa-->
       <div id="map" class="col-12 col-md-7 col-lg-8 p-0 bg-secondary-subtle" style="height: 300px;"></div>
     </div>
-  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="js/map.js"></script>
-</body>
-
-</html>
+<?php include __DIR__ . '/includes/footer.php'; ?>
