@@ -46,13 +46,19 @@
                         Mis reservas
                     </a>
                 </li>
+
+                <li class="nav-item">
+                     <a class="nav-link" href="panel_anfitrion.php">
+                        Panel del anfitrión
+                    </a>
+                </li>
             </ul>
 
             <!-- Botones de la derecha -->
             <div class="acciones-davinci">
                 <a class="btn boton-anfitrion"
-                   href="modulos/publicaciones/crear.php">
-                    Convierte en anfitrion
+                   href="publicar_casa.php">
+                    Publicar casa
                 </a>
 
                 <a class="btn boton-ingresar"
