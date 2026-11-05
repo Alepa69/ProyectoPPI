@@ -1,0 +1,27 @@
+body {
+  background-color: #f8faf9;
+  color: #670707;
+}
+
+.portada {
+  background-color: #031a36;
+  color: white;
+}
+
+.seccion-anfitriones {
+  background-color: #e5f1eb;
+}
+
+.tarjeta-tipo {
+  border-top: 4px solid #194a87;
+}
+
+.boton-destacado {
+  background-color: #1c4e67; /*llamadas a la acción */
+  color: white;
+}
+
+h1,
+h2 {
+  color: #1d3557; /* Azul marino para dar jerarquía en los títulos */
+}
