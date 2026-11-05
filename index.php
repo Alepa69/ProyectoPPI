@@ -6,15 +6,15 @@ require_once __DIR__. '/config/conexion.php';
 
 $casa_titulo=isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']):'';
 $precio_minimo=isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : ''; 
-$precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
+$precio_maximo=isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
 
 //
 $orden=isset($_GET['orden']) ? $_GET['orden']: '';
 
-$params = [];
-$types = '';
+$params=[];
+$types='';
 
-$sql = "select 
+$sql="select 
 a.id_alojamiento, 
 a.titulo, a.municipio, 
 a.departamento, 
@@ -75,17 +75,17 @@ $pageTitle = 'Menú principal';
         <div class="col-12 col-md-4">
             <label for="casa_titulo" class="form-label small fw-semibold">Buscar por nombre</label>
             <input type="text" id="casa_titulo" name="casa_titulo" class="form-control rounded-pill"
-                   placeholder="Ej: Zona rosa" value="<?= htmlspecialchars($casa_titulo) ?>">
+                   placeholder="Zona rosa" value="<?= htmlspecialchars($casa_titulo)?>">
         </div>
         <div class="col-6 col-md-2">
-            <label for="precio_minimo" class="form-label small fw-semibold">Precio mín.</label>
+            <label for="precio_minimo" class="form-label small fw-semibold">Precio min</label>
             <input type="number" id="precio_minimo" name="precio_minimo" class="form-control rounded-pill"
-                   placeholder="$0" min="0" value="<?= htmlspecialchars($precio_minimo) ?>">
+                   placeholder="0" min="0" value="<?= htmlspecialchars($precio_minimo)?>">
         </div>
         <div class="col-6 col-md-2">
-            <label for="precio_maximo" class="form-label small fw-semibold">Precio máx.</label>
+            <label for="precio_maximo" class="form-label small fw-semibold">Precio max</label>
             <input type="number" id="precio_maximo" name="precio_maximo" class="form-control rounded-pill"
-                   placeholder="$500" min="0" value="<?= htmlspecialchars($precio_maximo) ?>">
+                   placeholder="500" min="0" value="<?= htmlspecialchars($precio_maximo)?>">
         </div>
         <div class="col-8 col-md-2">
             <label for="orden" class="form-label small fw-semibold">Ordenar por</label>
@@ -115,7 +115,7 @@ $pageTitle = 'Menú principal';
         <?php foreach ($casas as $p):?>
 
           <a href="listing.php?id=<?= (int)$p['id_alojamiento'] ?>" class="card text-decoration-none text-dark border shadow-sm mb-3 overflow-hidden">
-                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
+                <img src="<?=htmlspecialchars($p['foto_principal'])?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
                 <div class="card-body">
                     <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
                     <p class="text-muted small mb-2">nombe:<?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?></p>
@@ -126,7 +126,7 @@ $pageTitle = 'Menú principal';
                 </div>
             </a>
 
-        <?php endforeach; ?>
+        <?php endforeach;?>
       </aside>
 <!--mapa no-->
 <div id="map" style="height: 400px;"></div>
