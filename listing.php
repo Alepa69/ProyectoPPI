@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fechaEntrada = $entrada->format('Y-m-d');
         $fechaSalida = $salida->format('Y-m-d');
 
-        // La base toma la tarifa del alojamiento y calcula el total.
+        // La base toma la tarifa del alojamiento y calcula el total
         $guardar = $conexion->prepare("
             INSERT INTO reservas (
                 id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
@@ -116,7 +116,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['confirmacion_reserva'][$id] =
                 'Solicitud enviada. Quedó pendiente de respuesta del anfitrión.';
 
-            // Volver por GET evita reenviar la solicitud al recargar.
+            // Volver por GET evita reenviar la solicitud al recargar
             header('Location: listing.php?id=' . $id, true, 303);
             exit;
         }
