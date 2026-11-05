@@ -38,7 +38,7 @@ $hayPaginaDetalle = is_file(__DIR__ . '/listing.php');
 </head>
 <body id="inicio">
 
-    <?php require __DIR__ . '/includes/navegacion.php'; ?>
+    <?php require __DIR__ . '/includes/menu.php'; ?>
 
     <main>
         <section class="portada py-5">

@@ -31,7 +31,7 @@ if (!$casa) {
     exit('Este alojamiento no está publicado o no existe.');
 }
 
-// Ajusta esta clave si el inicio de sesión de tu equipo usa otro nombre.
+// Id para verificar
 $idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
 $esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
 $hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
@@ -43,7 +43,7 @@ if (empty($_SESSION['csrf_reserva'])) {
     $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
 }
 
-// Verifica el formato y descarta fechas inexistentes, como el 31 de febrero.
+// Verifica el formato y descarta fechas inexistentes, como el 31 de febrero
 function leerFecha($valor): ?DateTimeImmutable
 {
     if (!is_string($valor)) {
@@ -64,7 +64,7 @@ function escapar($texto): string
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-// Este bloque se ejecuta al enviar el formulario.
+// Este bloque se ejecuta al enviar el formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entrada = leerFecha($_POST['entrada'] ?? null);
     $salida = leerFecha($_POST['salida'] ?? null);
@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <p><strong>Anfitrión:</strong> <?= escapar($casa['anfitrion']) ?></p>
             </section>
 
-            <aside class="col-lg-4">
+            <aside class="col-lg-5">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <h2 class="h5">Solicitar reserva</h2>
