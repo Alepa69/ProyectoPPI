@@ -58,6 +58,7 @@ $pageTitle = 'Publicar nueva casa';
             <div class="navbar-nav ms-auto">
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : '' ?>" href="index.php">Inicio</a>
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'publicar_casa.php') ? 'active' : '' ?>" href="publicar_casa.php">Publicar casa</a>
+                <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'panel_anfitrion.php') ? 'active' : '' ?>" href="panel_anfitrion.php">Mis reservas</a> <!-- CARLOS -->
             </div>
         </div>
     </nav>
