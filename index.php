@@ -33,7 +33,7 @@ where a.estado = 'publicado'";
 //titulo
 if (!empty($casa_titulo)) {
     $sql .= " and a.titulo like ?";
-    $params[] = "%" . $casa_titulo . "%";
+    $params[]= "%". $casa_titulo . "%";
     $types .= "s";
 }
 //min
@@ -91,12 +91,12 @@ $pageTitle = 'Menú principal';
             <label for="orden" class="form-label small fw-semibold">Ordenar por</label>
             <select name="orden" id="orden" class="form-select rounded-pill">
                 <option value="">Mas recientes</option>
-                <option value="precio_asc" <?= $orden === 'precio_asc' ? 'selected' : '' ?>>Precio: menor a mayor</option>
-                <option value="precio_desc" <?= $orden === 'precio_desc' ? 'selected' : '' ?>>Precio: mayor a menor</option>
+                <option value="precio_asc"<?= $orden==='precio_asc'?'selected' :'' ?>>Menor a mayor</option>
+                <option value="precio_desc"<?= $orden==='precio_desc'?'selected':'' ?>>Mayor a menor</option>
             </select>
         </div>
         <div class="col-4 col-md-2">
-            <button class="btn btn-brand w-100">🔍 Buscar</button>
+            <button class="btn btn-brand w-100">Buscar</button>
         </div>
     </div>
 </form>
@@ -133,9 +133,9 @@ $pageTitle = 'Menú principal';
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    const casas = <?= json_encode($casas) ?>;
+    const casas=<?=json_encode($casas)?>;
 
-    const map = L.map('map').setView([13.69, -89.23], 12);
+    const map = L.map('map').setView([13.69, -89.23],12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
