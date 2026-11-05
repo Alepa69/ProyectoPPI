@@ -15,3 +15,114 @@ body {
 .tarjeta-tipo {
   border-top: 4px solid #198754;
 }
+
+/* Fondo y tamaño del menú */
+.navbar-davinci {
+  background-color: #faf9f6;
+  padding: 12px 0;
+}
+
+/* Icono junto al nombre */
+.marca-davinci {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #173e3a;
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.marca-davinci:hover {
+  color: #173e3a;
+}
+
+.marca-davinci img {
+  object-fit: contain;
+}
+
+/* Opciones del menú */
+.enlaces-davinci .nav-link {
+  color: #344b4a;
+  font-size: 17px;
+  font-weight: 500;
+}
+
+.enlaces-davinci .nav-link:hover {
+  color: #198754;
+}
+
+/* Botones */
+.acciones-davinci {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.boton-anfitrion,
+.boton-ingresar {
+  border-radius: 30px;
+  padding: 10px 18px;
+  white-space: nowrap;
+}
+
+.boton-anfitrion {
+  color: #173e3a;
+  border: 1px solid #173e3a;
+}
+
+.boton-anfitrion:hover {
+  color: white;
+  background-color: #173e3a;
+}
+
+.boton-ingresar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  background-color: #173e3a;
+  border: 1px solid #173e3a;
+}
+
+.boton-ingresar:hover {
+  color: white;
+  background-color: #24564f;
+  border-color: #24564f;
+}
+
+/* Distribución en computadora */
+@media (min-width: 1200px) {
+  .navbar-davinci > .container-fluid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    column-gap: 20px;
+    align-items: center;
+  }
+
+  .navbar-davinci .navbar-brand {
+    justify-self: start;
+    margin-right: 0;
+  }
+
+  .navbar-davinci .navbar-collapse {
+    display: contents !important;
+  }
+
+  .enlaces-davinci {
+    justify-self: center;
+  }
+
+  .acciones-davinci {
+    justify-self: end;
+    flex-wrap: nowrap;
+  }
+}
+
+/* Espacio para los botones en celular */
+@media (max-width: 1199.98px) {
+  .acciones-davinci {
+    padding-top: 12px;
+    padding-bottom: 8px;
+  }
+}

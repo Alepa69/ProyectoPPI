@@ -2,7 +2,6 @@
 session_start();
 require_once __DIR__ . '/config/conexion.php';
 
-// El enlace del catálogo envía el ID en la URL.
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
 ]);
@@ -43,7 +42,7 @@ if (empty($_SESSION['csrf_reserva'])) {
     $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
 }
 
-// Verifica el formato y descarta fechas inexistentes, como el 31 de febrero
+// Verifica fecha de entrada y salida
 function leerFecha($valor): ?DateTimeImmutable
 {
     if (!is_string($valor)) {
@@ -64,7 +63,7 @@ function escapar($texto): string
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-// Este bloque se ejecuta al enviar el formulario
+// Luego de enviar el formulario
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entrada = leerFecha($_POST['entrada'] ?? null);
     $salida = leerFecha($_POST['salida'] ?? null);

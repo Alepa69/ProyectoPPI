@@ -145,7 +145,7 @@ $hayPaginaDetalle = is_file(__DIR__ . '/listing.php');
     </main>
 
     <footer class="container py-4 text-secondary">
-        Davinci · Proyecto de Programación Para Internet
+        HALOJA · Proyecto de ejemplo para PPI · 2026
     </footer>
 
     <script src="assets/js/bootstrap.bundle.min.js"></script>
