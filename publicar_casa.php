@@ -4,7 +4,7 @@ require_once __DIR__ . '/config/conexion.php';
 
 $mensajeError = "";
 
-// 1. Obtener tipos de alojamiento (Casa, Apartamento, Habitación)
+// tipos de alojamiento: Casa, Apartamento, Habitación
 $tipos = [];
 $resultadoTipos = $conexion->query("SELECT id_tipo, nombre FROM tipos_alojamiento ORDER BY id_tipo ASC");
 if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
@@ -12,7 +12,7 @@ if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
         $tipos[] = $fila;
     }
 } else {
-    // Si la tabla de catálogos estuviera vacía, sembramos los tipos por defecto
+    // por si la tabla de catálogos estuviera vacía
     $conexion->query("INSERT INTO tipos_alojamiento (nombre) VALUES ('Casa'), ('Apartamento'), ('Habitacion')");
     $resultadoTipos = $conexion->query("SELECT id_tipo, nombre FROM tipos_alojamiento ORDER BY id_tipo ASC");
     if ($resultadoTipos) {
@@ -22,25 +22,25 @@ if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
     }
 }
 
-// 2. Obtener un ID de anfitrión válido de la tabla usuarios
+// ID de anfitrion de la tabla usuarios
 $id_anfitrion = null;
 $resultadoUsuario = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' LIMIT 1");
 if ($resultadoUsuario && $filaUsuario = $resultadoUsuario->fetch_assoc()) {
     $id_anfitrion = (int)$filaUsuario['id_usuario'];
 } else {
-    // Si no hay usuarios activos, buscar cualquier usuario existente
+    // Si no hay usuarios activos
     $resultadoCualquierUsuario = $conexion->query("SELECT id_usuario FROM usuarios LIMIT 1");
     if ($resultadoCualquierUsuario && $filaCualquierUsuario = $resultadoCualquierUsuario->fetch_assoc()) {
         $id_anfitrion = (int)$filaCualquierUsuario['id_usuario'];
     } else {
-        // Crear un anfitrión de prueba si la tabla usuarios estuviera vacía
+        // Crear un anfitrión de prueba si la tabla usuarios estuviera vacía,  no vaya a ser XD
         $conexion->query("INSERT INTO usuarios (nombre, apellido, correo, password_hash, rol, estado) 
                           VALUES ('Anfitrión', 'Prueba', 'anfitrion@haloja.local', '$2y$10$abcdefghijklmnopqrstuv', 'usuario', 'activo')");
         $id_anfitrion = (int)$conexion->insert_id;
     }
 }
 
-// 3. Procesar el formulario cuando se envía por POST
+// Procesar el formulario cuando se envía por POST
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id_tipo = isset($_POST['id_tipo']) ? (int)$_POST['id_tipo'] : 0;
     $titulo = trim($_POST['titulo'] ?? '');
@@ -75,7 +75,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $mensajeError = "Las coordenadas geográficas ingresadas no son válidas.";
     } else {
         try {
-            // Inserción segura con sentencias preparadas
+            // Inserciin segura con sentencias preparadas
             $sentencia = $conexion->prepare("
                 INSERT INTO alojamientos (
                     id_anfitrion, id_tipo, titulo, descripcion, pais,
@@ -107,7 +107,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $id_alojamiento = $sentencia->insert_id;
                 $sentencia->close();
 
-                // Si se proporcionó una URL de foto, guardarla en fotos_alojamiento (posicion = 1)
+                // URL de foto, guardarla en fotos_alojamiento (posicion = 1)  (daba problemas por la posi )
                 if (!empty($foto)) {
                     $sentenciaFoto = $conexion->prepare("
                         INSERT INTO fotos_alojamiento (id_alojamiento, ruta_archivo, posicion)
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Título dinámico para la cabecera
+// Título dinamico para la cabecera
 $tituloPagina = 'Publicar nueva casa';
 $pageTitle = $tituloPagina;
 ?>
@@ -277,7 +277,7 @@ $pageTitle = $tituloPagina;
                                    placeholder="https://ejemplo.com/foto.jpg">
                         </div>
 
-                        <!-- Descripción -->
+                        <!-- Descripcion -->
                         <div class="col-12">
                             <label for="descripcion" class="form-label fw-semibold">Descripción del alojamiento <span class="text-danger">*</span></label>
                             <textarea class="form-control" id="descripcion" name="descripcion" rows="4" 
