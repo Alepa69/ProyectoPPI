@@ -27,11 +27,11 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             if (password_verify($clave, $fila['password_hash'])) {
                 
                 //credenciales guardadas
-                $_SESSION['id_usuario'] = $fila['id_usuario'];
-                $_SESSION['nombre']     = $fila['nombre'];
-                $_SESSION['apellido']   = $fila['apellido'];
-                $_SESSION['correo']     = $fila['correo'];
-                $_SESSION['rol']        = $fila['rol'];
+                $_SESSION['id_usuario']=$fila['id_usuario'];
+                $_SESSION['nombre']=$fila['nombre'];
+                $_SESSION['apellido']=$fila['apellido'];
+                $_SESSION['correo']= $fila['correo'];
+                $_SESSION['rol']=$fila['rol'];
 
                 header("Location: index.php");
                 exit();
@@ -74,7 +74,7 @@ require_once __DIR__ . '/includes/header.php';
                 </form>
 
                 <p class="mt-3 text-center mb-0">
-                    <a href="registro.php">¿No tienes cuenta? Regístrate aquí</a>
+                    <a href="registro.php">¿No tienes cuenta? Registrate aqui</a>
                 </p>
             </div>
         </div>
