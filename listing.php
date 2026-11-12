@@ -219,5 +219,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </aside>
         </div>
     </main>
+    <script>
+    const inputEntrada = document.getElementById('entrada');
+    const inputSalida = document.getElementById('salida');
+
+    if (inputEntrada && inputSalida) {
+        inputEntrada.addEventListener('change', function () {
+            if (this.value) {
+                const fechaMinSalida = new Date(this.value + 'T00:00:00');//dia siguiente a la fecha de entrada
+                fechaMinSalida.setDate(fechaMinSalida.getDate() + 1);
+                
+                const minStr = fechaMinSalida.toISOString().split('T')[0];
+                inputSalida.min = minStr;
+
+                if (inputSalida.value && inputSalida.value < minStr) {//ajusta solo la fecha si la pusieron antes de la llegada
+                    inputSalida.value = minStr;
+                }
+            }
+        });
+    }
+    </script>
+</body>
+</html>
 </body>
 </html>
