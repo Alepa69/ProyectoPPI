@@ -11,32 +11,40 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $apellido = trim($_POST['apellido']??'');
     $correo = trim($_POST['correo'] ??'');
     $clave = trim($_POST['clave'] ??'');
+    $clave2 = trim($_POST['clave2'] ??'');
 
-    if (!empty($nombre)&&!empty($apellido)&&!empty($correo)&&!empty($clave)) {
+    if (!empty($nombre)&&!empty($apellido)&&!empty($correo)&&!empty($clave)&&!empty($clave2)) {
         
-        //encriptado
-        $contraEncriptada = password_hash($clave, PASSWORD_DEFAULT);
+        if ($clave !== $clave2) {
+            $mensaje = "<div class='alert alert-warning'>Las contraseñas no coinciden.</div>";
+        } elseif (strlen($clave) < 8 || !preg_match('/[A-Z]/', $clave) || !preg_match('/[0-9]/', $clave)) {
+            $mensaje = "<div class='alert alert-warning'>La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.</div>";
+        } else {
+            //encriptado
+            $contraEncriptada = password_hash($clave, PASSWORD_DEFAULT);
 
-        $sql="insert into
-        usuarios (nombre, apellido, correo, password_hash)
-        values(?, ?, ?, ?)";
+            $sql="insert into
+            usuarios (nombre, apellido, correo, password_hash)
+            values(?, ?, ?, ?)";
 
-        $stmt =$conexion->prepare($sql);
-        $stmt->bind_param("ssss", $nombre, $apellido, $correo, $contraEncriptada);
+            $stmt =$conexion->prepare($sql);
+            $stmt->bind_param("ssss", $nombre, $apellido, $correo, $contraEncriptada);
 
-        try {
-            if ($stmt->execute()) {
-                $mensaje = "<div class='alert alert-success'>Cuenta creada, inicia sesion <a href='login.php' class='alert-link'>iniciar sesion</a>.</div>";
-            }
-        } catch (mysqli_sql_exception $e) {
+            try {
+                if ($stmt->execute()) {
+                    $mensaje = "<div class='alert alert-success'>Cuenta creada, inicia sesion <a href='login.php' class='alert-link'>iniciar sesion</a>.</div>";
+                }
+            } catch (mysqli_sql_exception $e) {
+                
+            //errores cuenta ya existe
+                if ($e->getCode()===1062) {
+                    $mensaje = "<div class='alert alert-danger'>Este correo ya esta en uso</div>";
+                } else {
+                    $mensaje = "<div class='alert alert-danger'>Error al crear la cuenta.</div>";
+                }
             
-        //errores cuenta ya existe
-            if ($e->getCode()===1062) {
-                $mensaje = "<div class='alert alert-danger'>Este correo ya esta en uso</div>";
-            } else {
-$mensaje = "<div class='alert alert-danger'>Error al crear la cuenta.</div>";            }
-        
-        $stmt->close();
+            $stmt->close();
+            }
         }
     } else {
         $mensaje = "<div class='alert alert-warning'>Por favor completa todos los campos.</div>";
@@ -73,6 +81,10 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="mb-3">
                         <label class="form-label">Contraseña:</label>
                         <input type="password" name="clave" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Confirmar Contraseña:</label>
+                        <input type="password" name="clave2" class="form-control" required>
                     </div>
                     <button type="submit" class="btn btn-dark w-100">Registrarme</button>
                 </form>
