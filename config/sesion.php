@@ -1,11 +1,10 @@
-<?php // CARLOS
+<?php
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Sesion de prueba mientras no exista el login
-// Hay que reemplazarlo por $_SESSION['id_usuario'] cuando se implemente el login.
+// Si no ha iniciado sesión, redirigir automáticamente al login
 if (!isset($_SESSION['id_usuario'])) {
-    $_SESSION['id_usuario'] = 1;
-    $_SESSION['nombre'] = 'Carlos';
+    header("Location: login.php");
+    exit();
 }
