@@ -23,7 +23,9 @@ if (session_status() === PHP_SESSION_NONE) {
             <div class="navbar-nav ms-auto">
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'index.php') ? 'active' : '' ?>" href="index.php">Inicio</a>
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'publicar_casa.php') ? 'active' : '' ?>" href="publicar_casa.php">Publicar casa</a>
-                <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'panel_anfitrion.php') ? 'active' : '' ?>" href="panel_anfitrion.php">Mis reservas</a>
+                <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'panel_anfitrion.php') ? 'active' : '' ?>" href="panel_anfitrion.php">Clientes</a>
+                <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'panel_cliente.php') ? 'active' : '' ?>" href="panel_cliente.php">Mis reservas</a>
+
                 
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'registro.php') ? 'active' : '' ?>" href="registro.php">Registro</a>
                 <a class="nav-link <?= (basename($_SERVER['PHP_SELF']) == 'login.php') ? 'active' : '' ?>" href="login.php">Inicio sesion</a>

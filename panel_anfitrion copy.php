@@ -26,7 +26,7 @@ if ($filtro !== 'todas') {
     $tipos .= 's';
 }
 $sql .= " ORDER BY r.creado_en DESC";
-
+A
 $stmt = $conexion->prepare($sql);
 $stmt->bind_param($tipos, ...$params);
 $stmt->execute();
