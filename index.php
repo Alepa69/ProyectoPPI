@@ -114,7 +114,7 @@ $pageTitle = 'Menú principal';
         <!--daniel cambie while por foreach-->
         <?php foreach ($casas as $p):?>
 
-          <a href="listing.php?id=<?= (int)$p['id_alojamiento'] ?>" class="card text-decoration-none text-dark border shadow-sm mb-3 overflow-hidden">
+          <div class="card border shadow-sm mb-3 overflow-hidden">
                 <img src="<?=htmlspecialchars($p['foto_principal'])?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
                 <div class="card-body">
                     <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
@@ -122,9 +122,10 @@ $pageTitle = 'Menú principal';
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-primary">$<?= number_format((float)$p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">la noche</small></span>
                     </div>
-                    <span class="text-muted small d-block mt-2">Anfitrion: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
+                    <span class="text-muted small d-block mt-2 mb-3">Anfitrion: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
+                    <a href="listing.php?id=<?= (int)$p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">ver detalles</a>
                 </div>
-            </a>
+            </div>
 
         <?php endforeach;?>
       </aside>
@@ -132,17 +133,19 @@ $pageTitle = 'Menú principal';
 <div id="map" style="height: 400px;"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
+
+<script>//js
     const casas=<?=json_encode($casas)?>;
 
     const map = L.map('map').setView([13.69, -89.23],12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-    casas.forEach(c => {
+    casas.forEach(c=> {
+        const link = '<a href="listing.php?id=' + c.id_alojamiento + '">' + c.titulo + '</a>';
         L.marker([c.latitud, c.longitud])
             .addTo(map)
-            .bindPopup(c.titulo + '<br>$' + c.precio_persona_noche + ' / noche');
+            .bindPopup(link + '<br>$' + c.precio_persona_noche + ' / noche');
     });
 </script>
 <?php include __DIR__ . '/includes/footer.php'; ?>
