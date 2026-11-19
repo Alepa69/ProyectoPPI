@@ -133,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <title><?= escapar($casa['titulo']) ?> | Davinci</title>
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/inicio.css">
+    <link rel="stylesheet" href="assets/css/tema-davinci.css">
 </head>
 <body>
     <main class="container py-4">

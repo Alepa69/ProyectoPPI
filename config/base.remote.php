@@ -1,8 +1,7 @@
 <?php
 return [
-    'servidor'   => '127.0.0.1',
-    'usuario'    => 'root',
-    'clave'      => '', 
-    'base_datos' => 'alquileres',
-    'puerto'     => 3306,
+    'servidor'   => 'localhost',
+    'usuario'    => 'partysvc_portalemprendeUser',
+    'clave'      => ']Ow=.(XNYIUYdfvxDS', 
+    'base_datos' => 'partysvc_portalemprende',
 ];
