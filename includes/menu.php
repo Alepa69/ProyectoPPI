@@ -61,21 +61,36 @@
                     Publicar casa
                 </a>
 
-                <a class="btn boton-ingresar"
-                   href="modulos/acceso/login.php">
-
-                    <svg width="19" height="19"
-                         viewBox="0 0 24 24"
-                         fill="none"
-                         stroke="currentColor"
-                         stroke-width="1.8"
-                         aria-hidden="true">
-                        <circle cx="12" cy="8" r="4"></circle>
-                        <path d="M4 21v-2a8 8 0 0 1 16 0v2z"></path>
-                    </svg>
-
-                    Ingresar
-                </a>
+                <?php if (isset($_SESSION['id_usuario'])): ?>
+                    <!-- Si ya inició sesión, mostramos Mi Perfil y Cerrar Sesión -->
+                    <a class="btn boton-ingresar" href="perfil.php">
+                        <svg width="19" height="19"
+                             viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="1.8"
+                             aria-hidden="true">
+                            <circle cx="12" cy="8" r="4"></circle>
+                            <path d="M4 21v-2a8 8 0 0 1 16 0v2z"></path>
+                        </svg>
+                        Mi Perfil
+                    </a>
+                    <a class="btn btn-outline-light ms-2" href="cerrarsesion.php">Salir</a>
+                <?php else: ?>
+                    <!-- Si NO ha iniciado sesión, mostramos Ingresar -->
+                    <a class="btn boton-ingresar" href="modulos/acceso/login.php">
+                        <svg width="19" height="19"
+                             viewBox="0 0 24 24"
+                             fill="none"
+                             stroke="currentColor"
+                             stroke-width="1.8"
+                             aria-hidden="true">
+                            <circle cx="12" cy="8" r="4"></circle>
+                            <path d="M4 21v-2a8 8 0 0 1 16 0v2z"></path>
+                        </svg>
+                        Ingresar
+                    </a>
+                <?php endif; ?>
             </div>
 
         </div>
