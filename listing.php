@@ -144,6 +144,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <div class="row g-4">
             <section class="col-lg-8">
                 <h1 class="h2"><?= escapar($casa['titulo']) ?></h1>
+                <!-- Si el usuario logueado es el anfitrión, mostrar botón de editar -->
+                <?php if ($idUsuario === (int)$casa['id_anfitrion']): ?>
+                    <a href="editar_casa.php?id=<?= $id ?>" class="btn btn-outline-primary btn-sm mb-3">
+                        ✏️ Editar publicación
+                    </a>
+                <?php endif; ?>
+                
                 <p class="text-muted">
                     <?= escapar($casa['municipio']) ?>,
                     <?= escapar($casa['departamento']) ?>
