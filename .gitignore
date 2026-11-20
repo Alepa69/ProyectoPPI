@@ -1,2 +1,15 @@
-/config/base.local.php
-/prueba_conexion.php
+# Configuraciones locales
+/config/base.remote.php 
+/config/base.local.php 
+
+# Archivos temporales
+*.log
+*.tmp
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Configuración personal del editor
+.vscode/
