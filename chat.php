@@ -29,11 +29,7 @@ if (!$reserva) {
 $esCliente=($idUsuario===(int)$reserva['id_solicitante']);
 $esAnfitrion=($idUsuario===(int)$reserva['id_anfitrion']);
 
-/*if (!$esCliente&&!$esAnfitrion) {
-    exit('No tienes permiso para ver este chat.');
-}*/
-
-// 2. Si se envió un mensaje nuevo por POST, lo guardamos
+//guarda el mensaje
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     $texto=trim($_POST['mensaje']??'');
 
@@ -44,8 +40,8 @@ VALUES (?,?,?)";
         $stmtInsert->bind_param('iis',$idReserva,$idUsuario,$texto);
         $stmtInsert->execute();
     }
-    /*// Recargamos la página para evitar que el mensaje se reenvíe al presionar F5
-    header('Location: chat.php?id_reserva='.$idReserva);*/
+    //para que no se ponga blanca la pantalla al enviar mensaje
+    header('Location: chat.php?id_reserva='.$idReserva);
     exit;
 }
 

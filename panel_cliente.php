@@ -79,8 +79,9 @@ include __DIR__ . '/includes/header.php';
                     <th>Huespedes</th>
                     <th>Total</th>
                     <th>Estado</th>
-                    <th>Acciones</th>
+                    
                     <th>Chat</th>
+                    <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
