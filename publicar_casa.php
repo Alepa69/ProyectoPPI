@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once __DIR__ . '/config/conexion.php';
 
@@ -21,19 +24,21 @@ if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
     }
 }
 
-// ID de anfitrion de la tabla usuarios
-$id_anfitrion = null;
-$resultadoUsuario = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' LIMIT 1");
-if ($resultadoUsuario && $filaUsuario = $resultadoUsuario->fetch_assoc()) {
-    $id_anfitrion = (int)$filaUsuario['id_usuario'];
-} else {
-    $resultadoCualquierUsuario = $conexion->query("SELECT id_usuario FROM usuarios LIMIT 1");
-    if ($resultadoCualquierUsuario && $filaCualquierUsuario = $resultadoCualquierUsuario->fetch_assoc()) {
-        $id_anfitrion = (int)$filaCualquierUsuario['id_usuario'];
+// ID de anfitrion: priorizar usuario autenticado en sesion, con respaldo activo
+$id_anfitrion = !empty($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : null;
+if ($id_anfitrion === null) {
+    $resultadoUsuario = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' LIMIT 1");
+    if ($resultadoUsuario && $filaUsuario = $resultadoUsuario->fetch_assoc()) {
+        $id_anfitrion = (int)$filaUsuario['id_usuario'];
     } else {
-        $conexion->query("INSERT INTO usuarios (nombre, apellido, correo, password_hash, rol, estado) 
-                          VALUES ('Anfitrión', 'Prueba', 'anfitrion@haloja.local', '$2y$10$abcdefghijklmnopqrstuv', 'usuario', 'activo')");
-        $id_anfitrion = (int)$conexion->insert_id;
+        $resultadoCualquierUsuario = $conexion->query("SELECT id_usuario FROM usuarios LIMIT 1");
+        if ($resultadoCualquierUsuario && $filaCualquierUsuario = $resultadoCualquierUsuario->fetch_assoc()) {
+            $id_anfitrion = (int)$filaCualquierUsuario['id_usuario'];
+        } else {
+            $conexion->query("INSERT INTO usuarios (nombre, apellido, correo, password_hash, rol, estado) 
+                              VALUES ('Anfitrión', 'Prueba', 'anfitrion@haloja.local', '$2y$10$abcdefghijklmnopqrstuv', 'usuario', 'activo')");
+            $id_anfitrion = (int)$conexion->insert_id;
+        }
     }
 }
 
