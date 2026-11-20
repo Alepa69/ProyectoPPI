@@ -1,20 +1,33 @@
 <?php
 require_once __DIR__. '/config/conexion.php';
 
-$sql = "select 
-a.id_alojamiento, 
-a.titulo, a.municipio, 
-a.departamento, 
-a.precio_persona_noche, 
-u.nombre AS anfitrion_nombre,
-COALESCE(f.ruta_archivo, 'https://picsum.photos/seed/casa/400/220') AS foto_principal
-
-from alojamientos a 
-join usuarios u on a.id_anfitrion = u.id_usuario
-left join fotos_alojamiento f on a.id_alojamiento = f.id_alojamiento and f.posicion=1
-
-where a.estado = 'publicado'
-order by a.creado_en DESC";
+$sql = "SELECT
+    a.id_alojamiento,
+    a.titulo,
+    COALESCE(NULLIF(a.ciudad, ''), a.municipio) AS municipio,
+    a.departamento,
+    COALESCE(NULLIF(a.precio_noche, 0), a.precio_persona_noche) AS precio_persona_noche,
+    u.nombre AS anfitrion_nombre,
+    COALESCE(
+        (SELECT ai.ruta_o_url
+         FROM alojamiento_imagenes ai
+         WHERE ai.alojamiento_id = a.id_alojamiento
+           AND ai.es_portada = 1
+         ORDER BY ai.orden ASC, ai.id ASC
+         LIMIT 1),
+        (SELECT ai2.ruta_o_url
+         FROM alojamiento_imagenes ai2
+         WHERE ai2.alojamiento_id = a.id_alojamiento
+         ORDER BY ai2.orden ASC, ai2.id ASC
+         LIMIT 1),
+        f.ruta_archivo,
+        'https://picsum.photos/seed/casa/400/220'
+    ) AS foto_principal
+FROM alojamientos a
+JOIN usuarios u ON a.id_anfitrion = u.id_usuario
+LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
+WHERE a.estado = 'publicado'
+ORDER BY a.creado_en DESC";
 
 $resultado = $conexion->query($sql);
 $pageTitle = 'Menu principal'; // Definido una sola vez aquí adentro
