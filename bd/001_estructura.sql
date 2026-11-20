@@ -30,28 +30,78 @@ CREATE TABLE alojamientos (
     id_alojamiento INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     id_anfitrion INT UNSIGNED NOT NULL,
     id_tipo INT UNSIGNED NOT NULL,
+    tipo_espacio ENUM('alojamiento_entero','habitacion_privada','habitacion_compartida') NOT NULL DEFAULT 'alojamiento_entero',
     titulo VARCHAR(150) NOT NULL,
     descripcion TEXT NOT NULL,
     pais VARCHAR(80) NOT NULL DEFAULT 'El Salvador',
     departamento VARCHAR(100) NOT NULL,
     municipio VARCHAR(100) NOT NULL,
+    ciudad VARCHAR(100) NOT NULL DEFAULT '',
     direccion VARCHAR(255) NOT NULL,
-    latitud DECIMAL(10,7) NOT NULL,
-    longitud DECIMAL(10,7) NOT NULL,
+    referencias VARCHAR(500) NULL,
+    latitud DECIMAL(10,7) NULL,
+    longitud DECIMAL(10,7) NULL,
     capacidad SMALLINT UNSIGNED NOT NULL,
+    capacidad_personas SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    num_habitaciones SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    num_camas SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    num_banos DECIMAL(3,1) NOT NULL DEFAULT 1.0,
+    hora_checkin TIME NOT NULL DEFAULT '15:00:00',
+    hora_checkout TIME NOT NULL DEFAULT '11:00:00',
+    estancia_minima SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    permite_mascotas TINYINT(1) NOT NULL DEFAULT 0,
+    permite_fumar TINYINT(1) NOT NULL DEFAULT 0,
+    permite_eventos TINYINT(1) NOT NULL DEFAULT 0,
+    reglas_adicionales TEXT NULL,
     precio_persona_noche DECIMAL(10,2) NOT NULL,
+    precio_noche DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+    tarifa_limpieza DECIMAL(10,2) NOT NULL DEFAULT 0.00,
     estado ENUM('borrador','publicado','inactivo','bloqueado') NOT NULL DEFAULT 'borrador',
     motivo_bloqueo VARCHAR(500) NULL,
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     actualizado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_alojamiento_anfitrion FOREIGN KEY (id_anfitrion) REFERENCES usuarios(id_usuario) ON DELETE RESTRICT,
     CONSTRAINT fk_alojamiento_tipo FOREIGN KEY (id_tipo) REFERENCES tipos_alojamiento(id_tipo) ON DELETE RESTRICT,
-    CONSTRAINT ck_alojamiento_latitud CHECK (latitud BETWEEN -90 AND 90),
-    CONSTRAINT ck_alojamiento_longitud CHECK (longitud BETWEEN -180 AND 180),
+    CONSTRAINT ck_alojamiento_latitud CHECK (latitud IS NULL OR latitud BETWEEN -90 AND 90),
+    CONSTRAINT ck_alojamiento_longitud CHECK (longitud IS NULL OR longitud BETWEEN -180 AND 180),
     CONSTRAINT ck_alojamiento_capacidad CHECK (capacidad > 0),
+    CONSTRAINT ck_alojamiento_capacidad_personas CHECK (capacidad_personas > 0),
+    CONSTRAINT ck_alojamiento_num_banos CHECK (num_banos > 0),
+    CONSTRAINT ck_alojamiento_estancia_minima CHECK (estancia_minima > 0),
     CONSTRAINT ck_alojamiento_precio CHECK (precio_persona_noche > 0),
+    CONSTRAINT ck_alojamiento_precio_noche CHECK (precio_noche >= 0),
+    CONSTRAINT ck_alojamiento_tarifa_limpieza CHECK (tarifa_limpieza >= 0),
     KEY idx_alojamiento_catalogo (estado, id_tipo, precio_persona_noche),
-    KEY idx_alojamiento_ubicacion (pais, departamento, municipio)
+    KEY idx_alojamiento_airbnb (estado, tipo_espacio, precio_noche),
+    KEY idx_alojamiento_ubicacion (pais, departamento, municipio),
+    KEY idx_alojamiento_ciudad (ciudad)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE alojamiento_imagenes (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    alojamiento_id INT UNSIGNED NOT NULL,
+    ruta_o_url VARCHAR(500) NOT NULL,
+    es_portada TINYINT(1) NOT NULL DEFAULT 0,
+    orden SMALLINT UNSIGNED NOT NULL DEFAULT 1,
+    creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_img_alojamiento FOREIGN KEY (alojamiento_id) REFERENCES alojamientos(id_alojamiento) ON DELETE CASCADE,
+    KEY idx_img_alojamiento_orden (alojamiento_id, es_portada, orden)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE amenidades (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    categoria VARCHAR(60) NOT NULL DEFAULT 'Basicos',
+    icono VARCHAR(80) NULL,
+    UNIQUE KEY uq_amenidad_nombre (nombre)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE alojamiento_amenidades (
+    alojamiento_id INT UNSIGNED NOT NULL,
+    amenidad_id INT UNSIGNED NOT NULL,
+    PRIMARY KEY (alojamiento_id, amenidad_id),
+    CONSTRAINT fk_aa_alojamiento FOREIGN KEY (alojamiento_id) REFERENCES alojamientos(id_alojamiento) ON DELETE CASCADE,
+    CONSTRAINT fk_aa_amenidad FOREIGN KEY (amenidad_id) REFERENCES amenidades(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE fotos_alojamiento (
