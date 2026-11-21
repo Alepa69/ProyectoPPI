@@ -140,17 +140,9 @@ $pageTitle = 'Editar: ' . $casa['titulo'];
                             <div class="card bg-light border">
                                 <div class="card-body">
                                     <label class="form-label fw-semibold">Ubicación en el mapa *</label>
-                                    <div id="mapaSelector" style="height: 300px; width: 100%; border-radius: 8px;" class="border mb-3"></div>
-                                    <div class="row g-2">
-                                        <div class="col-md-6">
-                                            <label for="latitud" class="form-label small fw-semibold">Latitud</label>
-                                            <input type="number" step="any" class="form-control form-control-sm" id="latitud" name="latitud" value="<?= htmlspecialchars($casa['latitud']) ?>" required>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <label for="longitud" class="form-label small fw-semibold">Longitud</label>
-                                            <input type="number" step="any" class="form-control form-control-sm" id="longitud" name="longitud" value="<?= htmlspecialchars($casa['longitud']) ?>" required>
-                                        </div>
-                                    </div>
+                                    <div id="mapaSelector" style="height: 300px; width: 100%; border-radius: 8px;" class="border"></div>
+                                    <input type="hidden" id="latitud" name="latitud" value="<?= htmlspecialchars((string)($casa['latitud'] ?? '')) ?>">
+                                    <input type="hidden" id="longitud" name="longitud" value="<?= htmlspecialchars((string)($casa['longitud'] ?? '')) ?>">
                                 </div>
                             </div>
                         </div>
@@ -190,6 +182,7 @@ function actualizarInputs(lat, lng) {
     inputLat.value = Number(lat).toFixed(7);
     inputLng.value = Number(lng).toFixed(7);
 }
+actualizarInputs(latInicial, lngInicial);
 marcador.on('dragend', function (e) {
     const pos = e.target.getLatLng();
     actualizarInputs(pos.lat, pos.lng);

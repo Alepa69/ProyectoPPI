@@ -227,14 +227,8 @@ include __DIR__ . '/includes/header.php';
                                     <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="btnLimpiarCoords">Limpiar coordenadas</button>
                                 </div>
                                 <div id="mapPublicar" class="border rounded-3 bg-light" style="height: 250px;"></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="latitud" class="form-label small text-muted mb-1">Latitud (opcional)</label>
-                                <input type="number" step="any" class="form-control form-control-sm" id="latitud" name="latitud" placeholder="Ej: 13.4926">
-                            </div>
-                            <div class="col-md-6">
-                                <label for="longitud" class="form-label small text-muted mb-1">Longitud (opcional)</label>
-                                <input type="number" step="any" class="form-control form-control-sm" id="longitud" name="longitud" placeholder="Ej: -89.3831">
+                                <input type="hidden" id="latitud" name="latitud">
+                                <input type="hidden" id="longitud" name="longitud">
                             </div>
                         </div>
                     </section>
@@ -424,7 +418,7 @@ include __DIR__ . '/includes/header.php';
                         <a href="index.php" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Cancelar</a>
                         <div class="ms-auto d-flex gap-2">
                             <button type="button" class="btn btn-dark px-4" id="btnSiguiente">Siguiente →</button>
-                            <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar">🚀 Publicar alojamiento</button>
+                            <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar" disabled>🚀 Publicar alojamiento</button>
                         </div>
                     </div>
                 </form>
@@ -491,6 +485,8 @@ include __DIR__ . '/includes/header.php';
             lngInput.value = lng.toFixed(6);
         }
     };
+
+    setPin(13.6929403, -89.2181911);
 
     map.on('click', (e) => setPin(e.latlng.lat, e.latlng.lng));
     document.getElementById('btnLimpiarCoords').addEventListener('click', () => {
@@ -736,7 +732,12 @@ include __DIR__ . '/includes/header.php';
         return true;
     };
 
-    const renderStep = (step) => {
+    let publishUnlockTimer = null;
+
+    const renderStep = (step, shouldClearAlert = true) => {
+        if (shouldClearAlert) {
+            clearAlert();
+        }
         currentStep = step;
         steps.forEach(s => s.classList.toggle('d-none', Number(s.dataset.step) !== step));
         indicators.forEach(ind => {
@@ -755,6 +756,20 @@ include __DIR__ . '/includes/header.php';
         btnSiguiente.classList.toggle('d-none', step === totalSteps);
         btnPublicar.classList.toggle('d-none', step !== totalSteps);
 
+        if (publishUnlockTimer) {
+            clearTimeout(publishUnlockTimer);
+            publishUnlockTimer = null;
+        }
+        btnPublicar.disabled = true;
+        if (step === totalSteps) {
+            publishUnlockTimer = setTimeout(() => {
+                publishUnlockTimer = null;
+                if (currentStep === totalSteps) {
+                    btnPublicar.disabled = false;
+                }
+            }, 250);
+        }
+
         if (step === 2) {
             setTimeout(() => map.invalidateSize(), 150);
         }
@@ -767,13 +782,36 @@ include __DIR__ . '/includes/header.php';
     });
 
     btnAnterior.addEventListener('click', () => {
-        clearAlert();
         if (currentStep > 1) renderStep(currentStep - 1);
+    });
+
+    form.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter') return;
+        const target = e.target;
+        if (!target || target.tagName !== 'INPUT' || target.id === 'nuevaUrlInput') return;
+        if (currentStep < totalSteps) {
+            e.preventDefault();
+            if (validateStep(currentStep)) {
+                renderStep(currentStep + 1);
+            }
+        }
     });
 
     // Envío asíncrono con JSON para conservar datos si hay error del servidor
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (currentStep < totalSteps) {
+            if (validateStep(currentStep)) {
+                renderStep(currentStep + 1);
+            }
+            return;
+        }
+        for (let step = 1; step < totalSteps; step++) {
+            if (!validateStep(step)) {
+                renderStep(step, false);
+                return;
+            }
+        }
         if (!validateStep(5)) return;
         syncImagesStateAndRender();
 
@@ -794,12 +832,12 @@ include __DIR__ . '/includes/header.php';
         } catch (err) {
             showAlert('Error de conexión al publicar. Intenta nuevamente.');
         } finally {
-            btnPublicar.disabled = false;
+            btnPublicar.disabled = currentStep !== totalSteps;
             btnPublicar.textContent = '🚀 Publicar alojamiento';
         }
     });
 
-    renderStep(1);
+    renderStep(1, false);
 })();
 </script>
 
