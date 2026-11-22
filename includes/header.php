@@ -60,9 +60,8 @@ if (isset($_SESSION['id_usuario'])) {
                         <?php else: ?>
                             <!-- ===== MODO HUÉSPED ===== -->
                             <a class="nav-link" href="index.php">Inicio</a>
-                            <a class="nav-link" href="modulos/reservas/mis_solicitudes.php">Mis reservas</a>
                             <a class="nav-link" href="publicar_casa.php">Publicar casa</a>
-
+<a class="nav-link" href="panel_cliente.php">Mis reservas</a>
                             <?php if ($esAnfitrionReal): ?>
                                 <!-- Si ya tiene casas, le damos el botón para cambiar a modo anfitrión -->
                                 <a class="nav-link fw-bold text-white ms-lg-3" href="cambiar_modo.php?modo=anfitrion">
