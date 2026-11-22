@@ -62,21 +62,6 @@ if ($precio_maximo !== '') {
     $types .= "d";
 }
 
-if (!empty($casa_titulo)) {
-    $sql .= " AND a.titulo LIKE ?";
-    $params[] = "%" . $casa_titulo . "%";
-    $types .= "s";
-}
-if ($precio_minimo !== '') {
-    $sql .= " AND {$precioExpr} >= ?";
-    $params[] = (float)$precio_minimo;
-    $types .= "d";
-}
-if ($precio_maximo !== '') {
-    $sql .= " AND {$precioExpr} <= ?";
-    $params[] = (float)$precio_maximo;
-    $types .= "d";
-}
 
 if ($orden === 'precio_asc') {
     $sql .= " ORDER BY precio_persona_noche ASC";
@@ -94,43 +79,67 @@ $stmt->execute();
 $resultado = $stmt->get_result();
 $casas = $resultado->fetch_all(MYSQLI_ASSOC);
 $pageTitle = 'Menú principal';
+$heroImagen = 'assets/img/ilopango.jpg';
 ?>
 
 <?php include __DIR__ . '/includes/header.php'; ?>
 
-<form action="" method="GET" class="card shadow-sm border-0 rounded-4 p-3 mb-4">
-        <?php if ($tipo > 0): ?>
-            <input type="hidden" name="tipo" value="<?= $tipo ?>">
-        <?php endif; ?>
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-4">
-                <label for="casa_titulo" class="form-label small fw-semibold">Buscar por nombre</label>
-                <input type="text" id="casa_titulo" name="casa_titulo" class="form-control rounded-pill"
-                       placeholder="Zona rosa" value="<?= htmlspecialchars($casa_titulo) ?>">
+<!-- OPCIÓN 1 (diseño sin bordes):  class="hero-haloja mb-5" -->
+<!-- OPCIÓN 2 (borde a borde):  class="hero-haloja hero-haloja--full mb-5" -->
+<section class="hero-haloja hero-haloja--full mb-5">
+    <img src="<?= htmlspecialchars($heroImagen, ENT_QUOTES, 'UTF-8') ?>" alt="" class="hero-haloja__bg">
+    <div class="hero-haloja__contenido">
+        <span class="hero-haloja__badge">Destinos únicos en El Salvador</span>
+        <h1 class="hero-haloja__titulo">
+            Encuentra tu <span class="hero-haloja__acento">lugar</span> en el mundo
+        </h1>
+        <p class="hero-haloja__subtitulo">
+            Casas, cabañas y apartamentos con anfitriones que te hacen sentir en casa.
+        </p>
+
+        <form action="" method="GET" class="hero-buscador">
+            <?php if ($tipo > 0): ?>
+                <input type="hidden" name="tipo" value="<?= $tipo ?>">
+            <?php endif; ?>
+
+            <div class="hero-buscador__campo hero-buscador__campo--grande">
+                <label for="casa_titulo" class="hero-buscador__label">Buscar por nombre</label>
+                <input type="text" id="casa_titulo" name="casa_titulo" class="form-control"
+                       placeholder="Ej. Zona Rosa, Escalón..." value="<?= htmlspecialchars($casa_titulo) ?>">
             </div>
-            <div class="col-6 col-md-2">
-                <label for="precio_minimo" class="form-label small fw-semibold">Precio min</label>
-                <input type="number" id="precio_minimo" name="precio_minimo" class="form-control rounded-pill"
-                       placeholder="0" min="0" value="<?= htmlspecialchars($precio_minimo) ?>">
+
+            <div class="hero-buscador__campo">
+                <label for="precio_minimo" class="hero-buscador__label">Precio mín.</label>
+                <input type="number" id="precio_minimo" name="precio_minimo" class="form-control"
+                       placeholder="$0" min="0" value="<?= htmlspecialchars($precio_minimo) ?>">
             </div>
-            <div class="col-6 col-md-2">
-                <label for="precio_maximo" class="form-label small fw-semibold">Precio max</label>
-                <input type="number" id="precio_maximo" name="precio_maximo" class="form-control rounded-pill"
-                       placeholder="500" min="0" value="<?= htmlspecialchars($precio_maximo) ?>">
+
+            <div class="hero-buscador__campo">
+                <label for="precio_maximo" class="hero-buscador__label">Precio máx.</label>
+                <input type="number" id="precio_maximo" name="precio_maximo" class="form-control"
+                       placeholder="$500" min="0" value="<?= htmlspecialchars($precio_maximo) ?>">
             </div>
-            <div class="col-8 col-md-2">
-                <label for="orden" class="form-label small fw-semibold">Ordenar por</label>
-                <select name="orden" id="orden" class="form-select rounded-pill">
-                    <option value="">Mas recientes</option>
+
+            <div class="hero-buscador__campo">
+                <label for="orden" class="hero-buscador__label">Ordenar por</label>
+                <select name="orden" id="orden" class="form-select">
+                    <option value="">Más recientes</option>
                     <option value="precio_asc" <?= $orden === 'precio_asc' ? 'selected' : '' ?>>Menor a mayor</option>
                     <option value="precio_desc" <?= $orden === 'precio_desc' ? 'selected' : '' ?>>Mayor a menor</option>
                 </select>
             </div>
-            <div class="col-4 col-md-2">
-                <button class="btn btn-brand w-100">Buscar</button>
+
+            <div class="hero-buscador__accion">
+                <button type="submit" class="btn hero-buscador__btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                    </svg>
+                    <span>Buscar</span>
+                </button>
             </div>
-        </div>
-    </form>
+        </form>
+    </div>
+</section>
 
     <div>
       <h2>Casas disponibles</h2>

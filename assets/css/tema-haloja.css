@@ -605,3 +605,241 @@ footer.border-top {
     animation-iteration-count: 1 !important;
   }
 }
+
+/*--------PARA LA PORTADA Y EL BUSCADOR INTEGRADO--------------*/
+/* ==========================================================
+   HERO PORTADA + BUSCADOR INTEGRADO (index.php)
+   ========================================================== */
+.hero-haloja {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  padding: clamp(34px, 5vw, 56px) clamp(20px, 4vw, 44px) clamp(24px, 4vw, 38px);
+  color: #ffffff;
+  background-color: var(--dv-forest-deep);
+  box-shadow: 0 20px 48px rgba(18, 51, 47, 0.16);
+}
+
+.hero-haloja__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.hero-haloja::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: linear-gradient(
+    105deg,
+    rgba(18, 51, 47, 0.88) 0%,
+    rgba(24, 63, 57, 0.62) 55%,
+    rgba(18, 51, 47, 0.34) 100%
+  );
+  pointer-events: none;
+}
+
+.hero-haloja__contenido {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-haloja__badge {
+  display: inline-flex;
+  align-items: center;
+  margin-bottom: 18px;
+  padding: 6px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  color: #f7f7f2;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-haloja__titulo {
+  max-width: 14ch;
+  margin: 0 0 14px;
+  color: #ffffff;
+  font-size: clamp(2.1rem, 4.5vw, 3.4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+}
+
+.hero-haloja__subtitulo {
+  max-width: 44ch;
+  margin: 0 0 34px;
+  color: rgba(247, 247, 242, 0.9);
+  font-size: clamp(0.98rem, 1.5vw, 1.12rem);
+  font-weight: 400;
+}
+
+/* Barra buscadora tipo píldora */
+.hero-buscador {
+  display: grid;
+  grid-template-columns:
+    minmax(210px, 2fr) minmax(110px, 1fr) minmax(110px, 1fr)
+    minmax(145px, 1.2fr) auto;
+  align-items: center;
+  padding: 10px 10px 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 38px rgba(18, 51, 47, 0.24);
+}
+
+.hero-buscador__campo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 18px;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.hero-buscador__campo:hover,
+.hero-buscador__campo:focus-within {
+  background-color: var(--dv-forest-soft);
+}
+
+/* Separadores verticales entre filtros */
+.hero-buscador__campo + .hero-buscador__campo::before {
+  content: "";
+  position: absolute;
+  top: 20%;
+  left: 0;
+  width: 1px;
+  height: 60%;
+  background-color: var(--dv-line);
+}
+
+.hero-buscador__campo:hover::before,
+.hero-buscador__campo:focus-within::before,
+.hero-buscador__campo:hover + .hero-buscador__campo::before,
+.hero-buscador__campo:focus-within + .hero-buscador__campo::before {
+  opacity: 0;
+}
+
+.hero-buscador__label {
+  margin: 0 0 2px;
+  color: var(--dv-forest-deep);
+  font-size: 0.78rem;
+  font-weight: 750;
+  line-height: 1.2;
+}
+
+/* Limpia bordes y alturas heredadas de Bootstrap/tema-haloja */
+.hero-buscador .form-control,
+.hero-buscador .form-select {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: var(--dv-ink);
+  background-color: transparent;
+  box-shadow: none !important;
+  font-size: 0.93rem;
+  line-height: 1.35;
+}
+
+.hero-buscador .form-select {
+  padding-right: 24px;
+  background-position: right center;
+  cursor: pointer;
+}
+
+.hero-buscador .form-control::placeholder {
+  color: var(--dv-muted);
+}
+
+.hero-buscador__accion {
+  padding-left: 10px;
+}
+
+.hero-buscador__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 52px;
+  padding: 0 26px;
+  border-radius: 999px !important;
+  font-size: 0.96rem;
+  white-space: nowrap;
+}
+
+/* Adaptación para tablet y móvil */
+@media (max-width: 991.98px) {
+  .hero-buscador {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .hero-buscador__campo--grande,
+  .hero-buscador__accion {
+    grid-column: 1 / -1;
+  }
+
+  .hero-buscador__campo {
+    padding: 10px 14px;
+    border: 1px solid var(--dv-line);
+    border-radius: 14px;
+    background-color: #fbfcfa;
+  }
+
+  .hero-buscador__campo + .hero-buscador__campo::before {
+    display: none;
+  }
+
+  .hero-buscador__accion {
+    padding-left: 0;
+    margin-top: 4px;
+  }
+
+  .hero-buscador__btn {
+    width: 100%;
+    min-height: 46px;
+  }
+}
+
+@media (max-width: 575.98px) {
+  .hero-haloja {
+    border-radius: 22px;
+  }
+
+  .hero-buscador {
+    grid-template-columns: 1fr;
+  }
+}
+
+/*Modifica para la opcion 2 de la portada*/
+body {
+  overflow-x: clip;
+}
+
+.hero-haloja.hero-haloja--full {
+  width: 100vw;
+  margin-top: -28px; /* Pega el hero justo debajo de la barra superior */
+  margin-left: calc(50% - 50vw);
+  border-radius: 0;
+  padding: clamp(46px, 6vw, 76px) 16px clamp(36px, 5vw, 54px);
+}
+
+.hero-haloja.hero-haloja--full .hero-haloja__contenido {
+  width: min(100%, 1180px);
+  margin-inline: auto;
+}
