@@ -11,38 +11,11 @@ if (!$id) {
     exit('Alojamiento no encontrado.');
 }
 
-$consulta = $conexion->prepare("
-    SELECT a.titulo, a.descripcion, a.municipio, a.departamento,
-           a.capacidad, a.precio_persona_noche, a.id_anfitrion,
-           u.nombre AS anfitrion, f.ruta_archivo AS foto
-    FROM alojamientos AS a
-    JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion
-    LEFT JOIN fotos_alojamiento AS f
-        ON f.id_alojamiento = a.id_alojamiento AND f.posicion = 1
-    WHERE a.id_alojamiento = ? AND a.estado = 'publicado'
-");
-$consulta->bind_param('i', $id);
-$consulta->execute();
-$casa = $consulta->get_result()->fetch_assoc();
-
-if (!$casa) {
-    http_response_code(404);
-    exit('Este alojamiento no está publicado o no existe.');
+function escapar($texto): string
+{
+    return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-// Id para verificar
-$idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
-$esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
-$hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
-$error = '';
-$confirmacion = $_SESSION['confirmacion_reserva'][$id] ?? '';
-unset($_SESSION['confirmacion_reserva'][$id]);
-
-if (empty($_SESSION['csrf_reserva'])) {
-    $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
-}
-
-// Verifica fecha de entrada y salida
 function leerFecha($valor): ?DateTimeImmutable
 {
     if (!is_string($valor)) {
@@ -58,12 +31,139 @@ function leerFecha($valor): ?DateTimeImmutable
     return $fecha && $fecha->format('Y-m-d') === $valor ? $fecha : null;
 }
 
-function escapar($texto): string
-{
-    return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
+// Información general del alojamiento y del anfitrión.
+$consulta = $conexion->prepare("
+    SELECT
+        a.id_alojamiento, a.titulo, a.descripcion, a.pais,
+        a.departamento, a.municipio, a.ciudad, a.direccion, a.referencias,
+        a.latitud, a.longitud, a.tipo_espacio, a.capacidad,
+        a.capacidad_personas, a.num_habitaciones, a.num_camas, a.num_banos,
+        a.hora_checkin, a.hora_checkout, a.estancia_minima,
+        a.permite_mascotas, a.permite_fumar, a.permite_eventos,
+        a.reglas_adicionales, a.precio_persona_noche, a.precio_noche,
+        a.tarifa_limpieza, a.id_anfitrion,
+        u.nombre AS nombre_anfitrion, u.apellido AS apellido_anfitrion,
+        u.creado_en AS anfitrion_desde,
+        t.nombre AS tipo_alojamiento
+    FROM alojamientos AS a
+    INNER JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion
+    LEFT JOIN tipos_alojamiento AS t ON t.id_tipo = a.id_tipo
+    WHERE a.id_alojamiento = ? AND a.estado = 'publicado'
+    LIMIT 1
+");
+$consulta->bind_param('i', $id);
+$consulta->execute();
+$casa = $consulta->get_result()->fetch_assoc();
+$consulta->close();
+
+if (!$casa) {
+    http_response_code(404);
+    exit('Este alojamiento no está publicado o no existe.');
 }
 
-// Luego de enviar el formulario
+// Fotos: se usa la tabla principal y la tabla anterior como respaldo.
+$fotos = [];
+$consultaFotos = $conexion->prepare("
+    SELECT ruta_o_url AS ruta
+    FROM alojamiento_imagenes
+    WHERE alojamiento_id = ?
+    ORDER BY es_portada DESC, orden ASC, id ASC
+");
+$consultaFotos->bind_param('i', $id);
+$consultaFotos->execute();
+$resultadoFotos = $consultaFotos->get_result();
+while ($foto = $resultadoFotos->fetch_assoc()) {
+    $ruta = trim((string) ($foto['ruta'] ?? ''));
+    if ($ruta !== '' && !in_array($ruta, $fotos, true)) {
+        $fotos[] = $ruta;
+    }
+}
+$consultaFotos->close();
+
+if (!$fotos) {
+    $consultaFotosLegacy = $conexion->prepare("
+        SELECT ruta_archivo AS ruta
+        FROM fotos_alojamiento
+        WHERE id_alojamiento = ?
+        ORDER BY posicion ASC
+    ");
+    $consultaFotosLegacy->bind_param('i', $id);
+    $consultaFotosLegacy->execute();
+    $resultadoFotosLegacy = $consultaFotosLegacy->get_result();
+    while ($foto = $resultadoFotosLegacy->fetch_assoc()) {
+        $ruta = trim((string) ($foto['ruta'] ?? ''));
+        if ($ruta !== '' && !in_array($ruta, $fotos, true)) {
+            $fotos[] = $ruta;
+        }
+    }
+    $consultaFotosLegacy->close();
+}
+
+// Amenidades seleccionadas por el anfitrión al publicar.
+$amenidades = [];
+$consultaAmenidades = $conexion->prepare("
+    SELECT am.nombre, am.categoria
+    FROM alojamiento_amenidades AS aa
+    INNER JOIN amenidades AS am ON am.id = aa.amenidad_id
+    WHERE aa.alojamiento_id = ?
+    ORDER BY am.categoria ASC, am.nombre ASC
+");
+$consultaAmenidades->bind_param('i', $id);
+$consultaAmenidades->execute();
+$resultadoAmenidades = $consultaAmenidades->get_result();
+while ($amenidad = $resultadoAmenidades->fetch_assoc()) {
+    $amenidades[] = $amenidad;
+}
+$consultaAmenidades->close();
+
+// Datos derivados para la presentación.
+$idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
+$esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
+$hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
+$error = '';
+$confirmacion = $_SESSION['confirmacion_reserva'][$id] ?? '';
+unset($_SESSION['confirmacion_reserva'][$id]);
+
+$nombreAnfitrion = trim($casa['nombre_anfitrion'] . ' ' . $casa['apellido_anfitrion']);
+$iniciales = mb_strtoupper(
+    mb_substr($casa['nombre_anfitrion'], 0, 1, 'UTF-8')
+    . mb_substr($casa['apellido_anfitrion'], 0, 1, 'UTF-8'),
+    'UTF-8'
+);
+$ciudad = trim((string) ($casa['ciudad'] ?: $casa['municipio']));
+$ubicacionTexto = implode(', ', array_filter([
+    $ciudad,
+    $casa['departamento'],
+    $casa['pais'],
+]));
+$hayCoordenadas = $casa['latitud'] !== null && $casa['longitud'] !== null;
+$consultaMapa = $hayCoordenadas
+    ? $casa['latitud'] . ',' . $casa['longitud']
+    : implode(', ', array_filter([
+        $casa['direccion'], $ciudad, $casa['departamento'], $casa['pais'],
+    ]));
+$mapaEmbed = 'https://www.google.com/maps?q=' . rawurlencode($consultaMapa) . '&output=embed';
+$mapaEnlace = 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($consultaMapa);
+$fechaAnfitrion = !empty($casa['anfitrion_desde'])
+    ? date('d/m/Y', strtotime($casa['anfitrion_desde']))
+    : 'No disponible';
+
+$tipoEspacio = [
+    'alojamiento_entero' => 'Alojamiento completo',
+    'habitacion_privada' => 'Habitación privada',
+    'habitacion_compartida' => 'Habitación compartida',
+][$casa['tipo_espacio']] ?? 'Alojamiento';
+
+$precioPorNoche = (float) $casa['precio_persona_noche'];
+$tarifaLimpieza = (float) $casa['tarifa_limpieza'];
+$totalFotos = count($fotos);
+$fotosVisibles = min($totalFotos, 5);
+
+if (empty($_SESSION['csrf_reserva'])) {
+    $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
+}
+
+// Se conserva el proceso original de solicitud de reserva.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entrada = leerFecha($_POST['entrada'] ?? null);
     $salida = leerFecha($_POST['salida'] ?? null);
@@ -82,7 +182,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fechaEntrada = $entrada->format('Y-m-d');
         $fechaSalida = $salida->format('Y-m-d');
 
-        // La base toma la tarifa del alojamiento y calcula el total
+        // La base toma la tarifa del alojamiento y calcula el total.
         $guardar = $conexion->prepare("
             INSERT INTO reservas (
                 id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
@@ -115,8 +215,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($guardar->affected_rows === 1) {
             $_SESSION['confirmacion_reserva'][$id] =
                 'Solicitud enviada. Quedó pendiente de respuesta del anfitrión.';
-
-            // Volver por GET evita reenviar la solicitud al recargar
             header('Location: listing.php?id=' . $id, true, 303);
             exit;
         }
@@ -134,120 +232,248 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/inicio.css">
     <link rel="stylesheet" href="assets/css/tema-davinci.css">
+    <link rel="stylesheet" href="assets/css/listing.css">
 </head>
 <body>
-    <main class="container py-4">
-        <a href="index.php#alojamientos" class="btn btn-outline-secondary mb-4">
-            Volver a alojamientos
-        </a>
+<main class="listing-page">
+    <div class="container listing-container">
+        <div class="listing-topbar">
+            <a href="index.php#alojamientos" class="listing-back-link">
+                <span aria-hidden="true">←</span> Volver a alojamientos
+            </a>
+            <?php if ($esAnfitrion): ?>
+                <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
+            <?php endif; ?>
+        </div>
 
-        <div class="row g-4">
-            <section class="col-lg-8">
-                <h1 class="h2"><?= escapar($casa['titulo']) ?></h1>
-                <!-- Si el usuario logueado es el anfitrión, mostrar botón de editar -->
-                <?php if ($idUsuario === (int)$casa['id_anfitrion']): ?>
-                    <a href="editar_casa.php?id=<?= $id ?>" class="btn btn-outline-primary btn-sm mb-3">
-                        ✏️ Editar publicación
-                    </a>
-                <?php endif; ?>
-                
-                <p class="text-muted">
-                    <?= escapar($casa['municipio']) ?>,
-                    <?= escapar($casa['departamento']) ?>
-                    · Hasta <?= (int) $casa['capacidad'] ?> huéspedes
+        <header class="listing-heading">
+            <div>
+                <p class="listing-eyebrow">DAVINCI · ALOJAMIENTOS</p>
+                <h1><?= escapar($casa['titulo']) ?></h1>
+                <p class="listing-location-line">
+                    <span aria-hidden="true">⌖</span>
+                    <?= escapar($ubicacionTexto) ?>
+                    <span class="listing-heading-dot">·</span>
+                    <?= escapar($tipoEspacio) ?>
                 </p>
+            </div>
+        </header>
 
-                <?php if (!empty($casa['foto'])): ?>
-                    <img src="<?= escapar($casa['foto']) ?>"
-                         alt="Foto de <?= escapar($casa['titulo']) ?>"
-                         class="img-fluid w-100 rounded object-fit-cover mb-4"
-                         style="max-height: 420px;">
-                <?php endif; ?>
-
-                <h2 class="h5">Sobre el alojamiento</h2>
-                <p><?= nl2br(escapar($casa['descripcion'])) ?></p>
-                <p><strong>Anfitrión:</strong> <?= escapar($casa['anfitrion']) ?></p>
+        <?php if ($totalFotos > 0): ?>
+            <section class="listing-gallery listing-gallery--<?= $totalFotos === 1 ? 'single' : ($totalFotos === 2 ? 'two' : ($totalFotos === 3 ? 'three' : 'multi')) ?>" aria-label="Galería de fotografías del alojamiento">
+                <?php for ($i = 0; $i < $fotosVisibles; $i++): ?>
+                    <button type="button" class="listing-gallery-photo listing-gallery-photo--<?= $i ?>"
+                            data-gallery-index="<?= $i ?>" aria-label="Abrir fotografía <?= $i + 1 ?> de <?= $totalFotos ?>">
+                        <img src="<?= escapar($fotos[$i]) ?>" alt="<?= escapar($casa['titulo']) ?> - fotografía <?= $i + 1 ?>"
+                             <?= $i === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>>
+                        <?php if ($i === $fotosVisibles - 1 && $totalFotos > 1): ?>
+                            <span class="listing-gallery-more">Ver las <?= $totalFotos ?> fotos</span>
+                        <?php endif; ?>
+                    </button>
+                <?php endfor; ?>
             </section>
+        <?php else: ?>
+            <div class="listing-gallery-empty"><span aria-hidden="true">⌂</span><p>Este alojamiento todavía no tiene fotografías disponibles.</p></div>
+        <?php endif; ?>
 
-            <aside class="col-lg-5">
-                <div class="card shadow-sm">
-                    <div class="card-body">
-                        <h2 class="h5">Solicitar reserva</h2>
-                        <p>
-                            <strong>$<?= number_format((float) $casa['precio_persona_noche'], 2) ?></strong>
-                            por persona y noche
-                        </p>
+        <div class="row g-4 g-xl-5 listing-layout">
+            <div class="col-lg-8 listing-main-column">
+                <section class="listing-highlights" aria-label="Características principales">
+                    <div class="listing-highlight"><span class="listing-highlight-icon" aria-hidden="true">♙</span><div><strong><?= (int) $casa['capacidad'] ?></strong><span>huéspedes</span></div></div>
+                    <div class="listing-highlight"><span class="listing-highlight-icon" aria-hidden="true">▦</span><div><strong><?= (int) $casa['num_habitaciones'] ?></strong><span>habitaciones</span></div></div>
+                    <div class="listing-highlight"><span class="listing-highlight-icon" aria-hidden="true">▤</span><div><strong><?= (int) $casa['num_camas'] ?></strong><span>camas</span></div></div>
+                    <div class="listing-highlight"><span class="listing-highlight-icon" aria-hidden="true">◫</span><div><strong><?= escapar(number_format((float) $casa['num_banos'], 1)) ?></strong><span>baños</span></div></div>
+                </section>
 
-                        <?php if ($confirmacion): ?>
-                            <p class="alert alert-success" role="status">
-                                <?= escapar($confirmacion) ?>
-                            </p>
-                        <?php endif; ?>
-
-                        <?php if ($error): ?>
-                            <p class="alert alert-danger" role="alert"><?= escapar($error) ?></p>
-                        <?php endif; ?>
-
-                        <?php if (!$idUsuario): ?>
-                            <p class="mb-0">Inicia sesión para solicitar una reserva.</p>
-                            <?php if (is_file(__DIR__ . '/modulos/acceso/login.php')): ?>
-                                <a href="modulos/acceso/login.php" class="btn btn-success mt-3">
-                                    Iniciar sesión
-                                </a>
-                            <?php endif; ?>
-                        <?php elseif ($esAnfitrion): ?>
-                            <p class="mb-0">Este alojamiento es tuyo.</p>
-                        <?php else: ?>
-                            <form method="post" action="listing.php?id=<?= $id ?>">
-                                <input type="hidden" name="csrf"
-                                       value="<?= escapar($_SESSION['csrf_reserva']) ?>">
-
-                                <label for="entrada" class="form-label">Entrada</label>
-                                <input type="date" name="entrada" id="entrada"
-                                       class="form-control mb-3"
-                                       min="<?= $hoy->format('Y-m-d') ?>" required>
-
-                                <label for="salida" class="form-label">Salida</label>
-                                <input type="date" name="salida" id="salida"
-                                       class="form-control mb-3"
-                                       min="<?= $hoy->modify('+1 day')->format('Y-m-d') ?>" required>
-
-                                <label for="huespedes" class="form-label">Huéspedes</label>
-                                <input type="number" name="huespedes" id="huespedes"
-                                       class="form-control mb-3" min="1"
-                                       max="<?= (int) $casa['capacidad'] ?>" value="1" required>
-
-                                <button type="submit" class="btn btn-success w-100">
-                                    Enviar solicitud
-                                </button>
-                            </form>
-                        <?php endif; ?>
+                <section class="listing-section listing-about">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">CONOCE EL LUGAR</p><h2>Acerca de este alojamiento</h2></div></div>
+                    <p class="listing-description"><?= nl2br(escapar($casa['descripcion'])) ?></p>
+                    <div class="listing-facts">
+                        <div><span>Tipo de alojamiento</span><strong><?= escapar($casa['tipo_alojamiento'] ?: 'No especificado') ?></strong></div>
+                        <div><span>Espacio</span><strong><?= escapar($tipoEspacio) ?></strong></div>
+                        <div><span>Estancia mínima</span><strong><?= (int) $casa['estancia_minima'] ?> noche(s)</strong></div>
                     </div>
+                </section>
+
+                <section class="listing-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">COMODIDAD DURANTE TU ESTANCIA</p><h2>Lo que ofrece este lugar</h2></div></div>
+                    <?php if ($amenidades): ?>
+                        <div class="listing-amenities-grid">
+                            <?php foreach ($amenidades as $amenidad): ?>
+                                <div class="listing-amenity"><span class="listing-amenity-check" aria-hidden="true">✓</span><span><?= escapar($amenidad['nombre']) ?></span></div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php else: ?>
+                        <p class="listing-muted-note">El anfitrión no ha agregado amenidades a esta publicación.</p>
+                    <?php endif; ?>
+                </section>
+
+                <section class="listing-section listing-host-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">TU ANFITRIÓN</p><h2>Conoce a <?= escapar($casa['nombre_anfitrion']) ?></h2></div></div>
+                    <div class="listing-host-card">
+                        <div class="listing-host-avatar" aria-hidden="true"><?= escapar($iniciales) ?></div>
+                        <div class="listing-host-info">
+                            <strong><?= escapar($nombreAnfitrion) ?></strong>
+                            <span>Anfitrión en Davinci</span>
+                            <small>Cuenta creada el <?= escapar($fechaAnfitrion) ?></small>
+                        </div>
+                        <span class="listing-host-label">Anfitrión</span>
+                    </div>
+                </section>
+
+                <section class="listing-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">ANTES DE RESERVAR</p><h2>Reglas de la casa</h2></div></div>
+                    <div class="listing-rules-grid">
+                        <div class="listing-rule"><span class="listing-rule-icon" aria-hidden="true">🐾</span><div><strong>Mascotas</strong><span><?= (int) $casa['permite_mascotas'] === 1 ? 'Permitidas' : 'No permitidas' ?></span></div></div>
+                        <div class="listing-rule"><span class="listing-rule-icon" aria-hidden="true">🚭</span><div><strong>Fumar</strong><span><?= (int) $casa['permite_fumar'] === 1 ? 'Permitido' : 'No permitido' ?></span></div></div>
+                        <div class="listing-rule"><span class="listing-rule-icon" aria-hidden="true">🎉</span><div><strong>Eventos</strong><span><?= (int) $casa['permite_eventos'] === 1 ? 'Permitidos' : 'No permitidos' ?></span></div></div>
+                        <div class="listing-rule"><span class="listing-rule-icon" aria-hidden="true">🌙</span><div><strong>Estancia mínima</strong><span><?= (int) $casa['estancia_minima'] ?> noche(s)</span></div></div>
+                    </div>
+                    <div class="listing-schedule">
+                        <div><span>Entrada (check-in)</span><strong><?= escapar(substr((string) $casa['hora_checkin'], 0, 5)) ?></strong></div>
+                        <div><span>Salida (check-out)</span><strong><?= escapar(substr((string) $casa['hora_checkout'], 0, 5)) ?></strong></div>
+                    </div>
+                    <?php if (!empty($casa['reglas_adicionales'])): ?>
+                        <div class="listing-extra-rules"><strong>Reglas adicionales del anfitrión</strong><p><?= nl2br(escapar($casa['reglas_adicionales'])) ?></p></div>
+                    <?php endif; ?>
+                </section>
+
+                <section class="listing-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">DÓNDE TE ALOJARÁS</p><h2>Ubicación</h2><p class="listing-section-subtitle"><?= escapar($ubicacionTexto) ?></p></div></div>
+                    <div class="listing-map-wrap">
+                        <iframe src="<?= escapar($mapaEmbed) ?>" title="Mapa de ubicación de <?= escapar($casa['titulo']) ?>"
+                                loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+                    </div>
+                    <?php if (!empty($casa['referencias'])): ?>
+                        <p class="listing-map-reference"><strong>Referencias:</strong> <?= escapar($casa['referencias']) ?></p>
+                    <?php endif; ?>
+                    <a class="listing-map-link" href="<?= escapar($mapaEnlace) ?>" target="_blank" rel="noopener noreferrer">Abrir ubicación en Google Maps <span aria-hidden="true">↗</span></a>
+                </section>
+
+                <section class="listing-section listing-reviews-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">EXPERIENCIAS DE HUÉSPEDES</p><h2>Reseñas y comentarios</h2></div></div>
+                    <div class="listing-empty-reviews">
+                        <span class="listing-review-icon" aria-hidden="true">☆</span>
+                        <div><strong>Aún no hay reseñas</strong><p>Cuando los huéspedes compartan su experiencia, sus comentarios aparecerán en esta sección.</p></div>
+                    </div>
+                </section>
+            </div>
+
+            <aside class="col-lg-4 listing-aside">
+                <div class="listing-booking-card">
+                    <div class="listing-price-block">
+                        <div><strong>$<?= number_format($precioPorNoche, 2) ?></strong><span>por persona / noche</span></div>
+                        <span class="listing-price-tag">USD</span>
+                    </div>
+                    <?php if ($tarifaLimpieza > 0): ?>
+                        <div class="listing-cleaning-fee"><span>Tarifa de limpieza indicada</span><strong>$<?= number_format($tarifaLimpieza, 2) ?></strong></div>
+                        <p class="listing-cleaning-note">Este cargo se muestra como información; el cálculo automático de la solicitud todavía no lo suma.</p>
+                    <?php endif; ?>
+                    <div class="listing-booking-divider"></div>
+                    <h2>Solicitar reserva</h2>
+                    <p class="listing-booking-intro">Elige tus fechas y la cantidad de huéspedes para enviar una solicitud al anfitrión.</p>
+
+                    <?php if ($confirmacion): ?>
+                        <p class="alert alert-success" role="status"><?= escapar($confirmacion) ?></p>
+                    <?php endif; ?>
+                    <?php if ($error): ?>
+                        <p class="alert alert-danger" role="alert"><?= escapar($error) ?></p>
+                    <?php endif; ?>
+
+                    <?php if (!$idUsuario): ?>
+                        <p class="listing-login-note">Inicia sesión para solicitar una reserva.</p>
+                        <a href="login.php" class="btn btn-success w-100 mt-2">Iniciar sesión</a>
+                    <?php elseif ($esAnfitrion): ?>
+                        <p class="listing-login-note">Este alojamiento pertenece a tu cuenta.</p>
+                        <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success w-100 mt-2">Editar mi publicación</a>
+                    <?php else: ?>
+                        <form method="post" action="listing.php?id=<?= (int) $id ?>" class="listing-booking-form">
+                            <input type="hidden" name="csrf" value="<?= escapar($_SESSION['csrf_reserva']) ?>">
+                            <label for="entrada" class="form-label">Fecha de entrada</label>
+                            <input type="date" name="entrada" id="entrada" class="form-control" min="<?= $hoy->format('Y-m-d') ?>" required>
+                            <label for="salida" class="form-label">Fecha de salida</label>
+                            <input type="date" name="salida" id="salida" class="form-control" min="<?= $hoy->modify('+1 day')->format('Y-m-d') ?>" required>
+                            <label for="huespedes" class="form-label">Número de huéspedes</label>
+                            <input type="number" name="huespedes" id="huespedes" class="form-control" min="1" max="<?= (int) $casa['capacidad'] ?>" value="1" required>
+                            <p class="listing-capacity-note">Este alojamiento admite hasta <?= (int) $casa['capacidad'] ?> huésped(es).</p>
+                            <button type="submit" class="btn btn-success w-100">Enviar solicitud</button>
+                            <p class="listing-booking-footnote">La solicitud quedará pendiente hasta que el anfitrión responda.</p>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </aside>
         </div>
-    </main>
-    <script>
+    </div>
+</main>
+
+<?php if ($totalFotos > 0): ?>
+<div class="modal fade listing-gallery-modal" id="listingGalleryModal" tabindex="-1" aria-labelledby="listingGalleryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 class="modal-title" id="listingGalleryModalLabel">Fotos del alojamiento</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div id="listingPhotoCarousel" class="carousel slide" data-bs-interval="false" data-bs-touch="true">
+                    <div class="carousel-inner">
+                        <?php foreach ($fotos as $indice => $foto): ?>
+                            <div class="carousel-item <?= $indice === 0 ? 'active' : '' ?>">
+                                <img src="<?= escapar($foto) ?>" class="d-block w-100" alt="<?= escapar($casa['titulo']) ?> - fotografía <?= $indice + 1 ?>">
+                                <div class="listing-modal-photo-count"><?= $indice + 1 ?> / <?= $totalFotos ?></div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php if ($totalFotos > 1): ?>
+                        <button class="carousel-control-prev" type="button" data-bs-target="#listingPhotoCarousel" data-bs-slide="prev" aria-label="Fotografía anterior"><span class="carousel-control-prev-icon" aria-hidden="true"></span></button>
+                        <button class="carousel-control-next" type="button" data-bs-target="#listingPhotoCarousel" data-bs-slide="next" aria-label="Fotografía siguiente"><span class="carousel-control-next-icon" aria-hidden="true"></span></button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<script src="assets/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Abre el visor en la fotografía que seleccionó el usuario.
+    const galleryModalElement = document.getElementById('listingGalleryModal');
+    const photoCarouselElement = document.getElementById('listingPhotoCarousel');
+
+    if (galleryModalElement && photoCarouselElement && window.bootstrap) {
+        const galleryModal = bootstrap.Modal.getOrCreateInstance(galleryModalElement);
+        const carouselItems = Array.from(photoCarouselElement.querySelectorAll('.carousel-item'));
+
+        document.querySelectorAll('[data-gallery-index]').forEach((button) => {
+            button.addEventListener('click', () => {
+                const selectedIndex = Number(button.dataset.galleryIndex || 0);
+                carouselItems.forEach((item, index) => item.classList.toggle('active', index === selectedIndex));
+                galleryModal.show();
+            });
+        });
+    }
+
+    // La fecha de salida debe ser posterior a la fecha de entrada.
     const inputEntrada = document.getElementById('entrada');
     const inputSalida = document.getElementById('salida');
 
     if (inputEntrada && inputSalida) {
         inputEntrada.addEventListener('change', function () {
             if (this.value) {
-                const fechaMinSalida = new Date(this.value + 'T00:00:00');//dia siguiente a la fecha de entrada
+                const fechaMinSalida = new Date(this.value + 'T00:00:00');
                 fechaMinSalida.setDate(fechaMinSalida.getDate() + 1);
-                
-                const minStr = fechaMinSalida.toISOString().split('T')[0];
+                const minStr = fechaMinSalida.getFullYear() + '-'
+                    + String(fechaMinSalida.getMonth() + 1).padStart(2, '0') + '-'
+                    + String(fechaMinSalida.getDate()).padStart(2, '0');
                 inputSalida.min = minStr;
 
-                if (inputSalida.value && inputSalida.value < minStr) {//ajusta solo la fecha si la pusieron antes de la llegada
+                if (inputSalida.value && inputSalida.value < minStr) {
                     inputSalida.value = minStr;
                 }
             }
         });
     }
-    </script>
-</body>
-</html>
+</script>
 </body>
 </html>
