@@ -1,5 +1,5 @@
 /* ==========================================================
-   DAVINCI — tema visual
+   HALOJA — tema visual
    Hoja exclusivamente estética. No contiene reglas funcionales.
    ========================================================== */
 
@@ -36,81 +36,6 @@ body {
   line-height: 1.6;
 }
 
-/* Cabecera compartida */
-.navbar.navbar-dark.bg-dark {
-  position: relative;
-  z-index: 1000;
-  padding: 14px 0;
-  margin-bottom: 34px !important;
-  background: linear-gradient(
-    105deg,
-    var(--dv-forest-deep),
-    var(--dv-forest)
-  ) !important;
-  box-shadow: 0 8px 26px rgba(18, 51, 47, 0.16) !important;
-}
-
-.navbar.navbar-dark .container {
-  gap: 18px;
-}
-
-.navbar.navbar-dark .navbar-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  margin-right: 18px;
-  color: #fff;
-  font-size: 1.22rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-}
-
-.navbar.navbar-dark .navbar-brand::before {
-  content: "D";
-  display: inline-grid;
-  width: 35px;
-  height: 35px;
-  place-items: center;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  border-radius: 11px;
-  color: var(--dv-forest-deep);
-  background: #f3e8d8;
-  font-size: 1.05rem;
-  letter-spacing: 0;
-}
-
-.navbar.navbar-dark .navbar-nav {
-  align-items: center;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: 5px;
-}
-
-.navbar.navbar-dark .nav-link {
-  padding: 9px 13px;
-  border-radius: 999px;
-  color: rgba(255, 255, 255, 0.78);
-  font-size: 0.94rem;
-  font-weight: 600;
-  transition:
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-
-.navbar.navbar-dark .nav-link:hover,
-.navbar.navbar-dark .nav-link.active {
-  color: #fff;
-  background: rgba(255, 255, 255, 0.13);
-}
-
-.navbar.navbar-dark .navbar-text {
-  padding: 7px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.19);
-  border-radius: 999px;
-  color: #fff !important;
-  font-size: 0.86rem;
-}
-
 /* Ancho y ritmo general de las páginas con cabecera compartida */
 body > .container.mb-5 {
   width: min(100% - 32px, 1180px);
@@ -118,7 +43,7 @@ body > .container.mb-5 {
   min-height: 55vh;
   margin-right: auto;
   margin-left: auto;
-  padding: 4px 0 32px;
+  padding: 28px 0 32px;
 }
 
 h1,
@@ -213,7 +138,7 @@ textarea.form-control {
   box-shadow: 0 0 0 4px rgba(142, 170, 157, 0.18);
 }
 
-/* Botones */
+/* Botones generales */
 .btn {
   min-height: 39px;
   border-radius: 11px;
@@ -525,31 +450,126 @@ footer.border-top {
   background: rgba(255, 255, 255, 0.72);
 }
 
-/* Responsive */
+/* ==========================================================
+   HEADER HALOJA (Difuminado, Centrado en Anfitrión y Dropdown)
+   ========================================================== */
+.navbar-davinci {
+  padding: 12px 0;
+  z-index: 1030;
+}
+
+.navbar-davinci.efecto-cristal {
+  background-color: rgba(247, 247, 242, 0.82) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(24, 63, 57, 0.1);
+}
+
+/* Simetría de bloques para centrar el menú de anfitrión */
+@media (min-width: 992px) {
+  .bloque-izquierdo,
+  .bloque-derecho {
+    flex: 1;
+  }
+
+  .bloque-central {
+    flex: 2;
+  }
+}
+
+.marca-davinci {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--dv-forest-deep) !important;
+  font-size: 1.55rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.marca-davinci img {
+  object-fit: contain;
+}
+
+/* Enlaces del centro (Modo Anfitrión) y Registro */
+.accion-texto {
+  color: var(--dv-forest) !important;
+  text-decoration: none !important;
+  font-weight: 650;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
+}
+
+.accion-texto:hover,
+.accion-texto.active {
+  color: var(--dv-forest-deep) !important;
+  background-color: var(--dv-forest-soft);
+}
+
+/* Botón píldora de las 3 rayitas */
+.boton-perfil-pill {
+  border-color: var(--dv-line) !important;
+  transition:
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+
+.boton-perfil-pill:hover {
+  box-shadow: 0 6px 16px rgba(24, 63, 57, 0.12) !important;
+}
+
+/* Estilo del menú desplegable */
+.menu-haloja {
+  background-color: var(--dv-paper);
+  border: 1px solid var(--dv-line) !important;
+}
+
+.menu-haloja .dropdown-item {
+  color: var(--dv-ink);
+  font-weight: 500;
+  font-size: 0.94rem;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.menu-haloja .dropdown-item:hover {
+  background-color: var(--dv-forest-soft);
+  color: var(--dv-forest-deep);
+}
+
+.menu-haloja .dropdown-item.text-danger:hover {
+  background-color: #fdf2f2;
+  color: #dc3545 !important;
+}
+
+/* Botón Ingresar (Usuarios no logueados) */
+.boton-ingresar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff !important;
+  background-color: var(--dv-forest) !important;
+  border: 1px solid var(--dv-forest) !important;
+  border-radius: 999px !important;
+  padding: 8px 20px;
+  font-weight: 650;
+}
+
+.boton-ingresar:hover {
+  background-color: var(--dv-forest-deep) !important;
+  border-color: var(--dv-forest-deep) !important;
+}
+
+/* Responsive móvil */
 @media (max-width: 767.98px) {
-  .navbar.navbar-dark {
-    padding: 11px 0;
-  }
-
-  .navbar.navbar-dark .container {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .navbar.navbar-dark .navbar-nav {
-    width: 100%;
-    align-items: stretch;
-    gap: 2px;
-  }
-
-  .navbar.navbar-dark .nav-link {
-    padding: 8px 10px;
-  }
-
-  .navbar.navbar-dark .navbar-text {
-    margin: 7px 0 0 !important;
-  }
-
   body > .container.mb-5 {
     width: min(100% - 24px, 1180px);
   }
@@ -584,67 +604,4 @@ footer.border-top {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
-}
-
-/*HEAAAAADERRRR*/
-
-/* =========================================
-   EFECTO DIFUMINADO (FROSTED GLASS)
-   ========================================= */
-.navbar-davinci.efecto-cristal {
-  background-color: rgba(250, 249, 246, 0.75) !important;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px); /* Soporte para Safari */
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-}
-
-/* =========================================
-   CENTRADO PERFECTO DE 3 BLOQUES (PC)
-   ========================================= */
-@media (min-width: 1200px) {
-  .navbar-davinci > .container-fluid {
-    display: flex !important;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  /* El menú colapsable debe ocupar todo el ancho restante */
-  .navbar-davinci .navbar-collapse {
-    display: flex !important;
-    flex-grow: 1;
-  }
-
-  .bloque-izquierdo {
-    flex: 1;
-    display: flex;
-    justify-content: flex-start;
-  }
-
-  .bloque-central {
-    flex: 2; /* Toma más espacio pero mantiene el eje central */
-    display: flex;
-    justify-content: center;
-  }
-
-  .bloque-derecho {
-    flex: 1;
-    display: flex;
-    justify-content: flex-end;
-  }
-}
-
-/* Estilo para los enlaces de texto con iconos */
-.accion-texto {
-  color: #173e3a;
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 15px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  transition: color 0.2s;
-}
-
-.accion-texto:hover {
-  color: #198754;
 }

@@ -5,7 +5,7 @@
       <span class="mx-2">·</span>
       <a href="index.php" class="text-decoration-none text-muted">Inicio</a>
       <span class="mx-2">·</span>
-      <a href="publicar_casa.php" class="text-decoration-none text-muted">Publicar espacio</a>
+      <!-- <a href="publicar_casa.php" class="text-decoration-none text-muted">Publicar espacio</a> -->
     </div>
 
     <div class="d-flex align-items-center gap-3 fw-semibold text-dark">

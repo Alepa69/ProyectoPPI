@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 $esAnfitrionReal = false;
 $modoActual = $_SESSION['modo'] ?? 'huesped';
+$paginaActual = basename($_SERVER['PHP_SELF']);
 
 if (isset($_SESSION['id_usuario'])) {
     if (!isset($conexion)) {
@@ -24,112 +25,150 @@ if (isset($_SESSION['id_usuario'])) {
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'HALOJA' ?></title>
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/tema-davinci.css">
+    <link rel="stylesheet" href="assets/css/tema-haloja.css?v=3">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 
-    <nav class="navbar navbar-expand-xl navbar-davinci efecto-cristal sticky-top shadow-sm">
-        <div class="container-fluid px-4">
+    <nav class="navbar navbar-davinci efecto-cristal sticky-top shadow-sm">
+        <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
             
-         <!-- LOGO HALOJA -->
+            <!-- IZQUIERDA: Marca y Logo -->
             <div class="bloque-izquierdo">
                 <a class="navbar-brand marca-davinci text-decoration-none m-0" href="index.php">
-                    <img src="assets/img/logo-haloja.png" alt="" width="36" height="36">
+                    <img src="assets/img/logo-davinci.png" alt="Logo Haloja" width="36" height="36">
                     <span>HALOJA</span>
                 </a>
             </div>
-            
-            <button class="navbar-toggler border-0 shadow-none" type="button" data-bs-toggle="collapse" data-bs-target="#menuPrincipal">
-                <span class="navbar-toggler-icon"></span>
-            </button>
 
-            <!-- CONTENEDOR CENTRAL Y DERECHO -->
-            <div class="collapse navbar-collapse" id="menuPrincipal">
-                
-                <!-- BLOQUE CENTRAL: Enlaces Funcionales -->
-                <div class="bloque-central mx-auto mt-3 mt-xl-0">
-                    <ul class="navbar-nav d-flex gap-xl-4 p-0">
-                        <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
-                            <!-- Vistas del anfitrion -->
-                            <li class="nav-item">
-                                <a class="nav-link accion-texto" href="panel_anfitrion.php">
-                                    <i class="bi bi-calendar-check fs-5"></i> Reservas
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link accion-texto" href="mis_alojamientos.php">
-                                    <i class="bi bi-houses fs-5"></i> Mis Alojamientos
-                                </a>
-                            </li>
-                        <?php else: ?>
-                            <!-- Vistas del huesped -->
-                            <?php if (isset($_SESSION['id_usuario'])): ?>
-                                <li class="nav-item">
-                                    <a class="nav-link accion-texto" href="modulos/reservas/mis_solicitudes.php">
-                                        <i class="bi bi-luggage fs-5"></i> Mis reservas
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a class="nav-link accion-texto" href="publicar_casa.php">
-                                        <i class="bi bi-house-add fs-5"></i> Publicar casa
-                                    </a>
-                                </li>
-                            <?php else: ?>
-                                <li class="nav-item">
-                                    <a class="nav-link accion-texto" href="publicar_casa.php">Pon tu espacio en Haloja</a>
-                                </li>
-                            <?php endif; ?>
-                        <?php endif; ?>
+            <!-- CENTRO: Solo visible en la barra cuando está en MODO ANFITRIÓN (PC) -->
+            <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
+                <div class="bloque-central d-none d-lg-flex justify-content-center">
+                    <ul class="navbar-nav flex-row gap-2">
+                        <li class="nav-item">
+                            <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
+                                <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link accion-texto <?= $paginaActual === 'mis_alojamientos.php' ? 'active' : '' ?>" href="mis_alojamientos.php">
+                                <i class="bi bi-houses fs-5"></i> Mis alojamientos
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php">
+                                <i class="bi bi-house-add fs-5"></i> Publicar casa
+                            </a>
+                        </li>
                     </ul>
                 </div>
+            <?php endif; ?>
 
-                <!-- PARTE DERECHA: Avatar y sesion usuario -->
-                <div class="bloque-derecho mt-3 mt-xl-0 pb-2 pb-xl-0">
-                    <?php if (isset($_SESSION['id_usuario'])): ?>
+            <!-- DERECHA: Menú de usuario o Acceso -->
+            <div class="bloque-derecho d-flex align-items-center justify-content-end">
+                <?php if (isset($_SESSION['id_usuario'])): ?>
+                    
+                    <div class="dropdown">
+                        <!-- Botón píldora con las 3 rayitas e inicial -->
+                        <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);"></i>
+                            <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);">
+                                <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
+                            </div>
+                        </button>
                         
-                        <!-- Dropdown (tresflechasbroder) de Usuario -->
-                        <div class="dropdown">
-                            <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6 !important;">
-                                <i class="bi bi-list fs-5 ms-1" style="color: #173e3a;"></i>
-                                <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; font-size: 14px; background-color: #173e3a;">
-                                    <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
-                                </div>
-                            </button>
-                            
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-2 rounded-4 p-2" style="min-width: 220px; background-color: #faf9f6;">
-                                <li><h6 class="dropdown-header fw-bold fs-6" style="color: #173e3a;">Hola, <?= htmlspecialchars($_SESSION['nombre']) ?></h6></li>
-                                <li><a class="dropdown-item rounded py-2 d-flex align-items-center gap-2" href="perfil.php" style="color: #344b4a;"><i class="bi bi-person fs-5"></i> Mi perfil</a></li>
-                                
-                                <li><hr class="dropdown-divider"></li>
-                                
-                                <!-- CAMBIO DE MODO SIEMPRE DENTRO DEL DROPDOWN -->
-                                <?php if ($modoActual === 'anfitrion'): ?>
-                                    <li><a class="dropdown-item rounded py-2 d-flex align-items-center gap-2 fw-medium" href="cambiar_modo.php?modo=huesped" style="color: #173e3a;"><i class="bi bi-arrow-repeat fs-5"></i> Modo Huésped</a></li>
-                                <?php else: ?>
-                                    <?php if ($esAnfitrionReal): ?>
-                                        <li><a class="dropdown-item rounded py-2 d-flex align-items-center gap-2 fw-medium" href="cambiar_modo.php?modo=anfitrion" style="color: #173e3a;"><i class="bi bi-arrow-repeat fs-5"></i> Modo Anfitrión</a></li>
-                                    <?php endif; ?>
-                                <?php endif; ?>
+<!-- Menú desplegable -->
+<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 rounded-4 p-2 menu-haloja" style="min-width: 245px;">
+    
+    <!-- Saludo e indicador de modo actual -->
+    <li class="px-3 py-2 d-flex align-items-center justify-content-between">
+        <span class="fw-bold" style="color: var(--dv-forest-deep);">
+            Hola, <?= htmlspecialchars($_SESSION['nombre']) ?>
+        </span>
+        <span class="badge" style="background-color: var(--dv-forest-soft); color: var(--dv-forest);">
+            <?= $modoActual === 'anfitrion' ? 'Anfitrión' : 'Huésped' ?>
+        </span>
+    </li>
 
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item rounded py-2 text-danger d-flex align-items-center gap-2" href="cerrarsesion.php"><i class="bi bi-box-arrow-right fs-5"></i> Cerrar sesión</a></li>
-                            </ul>
-                        </div>
+    <li>
+        <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="perfil.php">
+            <i class="bi bi-person fs-5"></i> Mi perfil
+        </a>
+    </li>
 
-                    <?php else: ?>
-                        <!-- usuarios q no se han logeado -->
-                        <div class="d-flex align-items-center gap-3">
-                            <a href="registro.php" class="accion-texto">Registro</a>
-                            <a href="login.php" class="btn boton-ingresar shadow-sm">
-                                <i class="bi bi-person-circle fs-5"></i> Ingresar
-                            </a>
-                        </div>
-                    <?php endif; ?>
-                </div>
+    <?php if ($modoActual === 'anfitrion'): ?>
+        <!-- En Modo Anfitrión: en PC ya están en el header, así que solo se muestran aquí en celular (d-lg-none) -->
+        <li class="d-lg-none"><hr class="dropdown-divider my-1"></li>
+        <li class="d-lg-none">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_anfitrion.php">
+                <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
+            </a>
+        </li>
+        <li class="d-lg-none">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="mis_alojamientos.php">
+                <i class="bi bi-houses fs-5"></i> Mis alojamientos
+            </a>
+        </li>
+        <li class="d-lg-none">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
+                <i class="bi bi-house-add fs-5"></i> Publicar casa
+            </a>
+        </li>
+    <?php else: ?>
+        <!-- En Modo Huésped: solo opciones de huésped -->
+        <li><hr class="dropdown-divider my-1"></li>
+        <li>
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="modulos/reservas/mis_solicitudes.php">
+                <i class="bi bi-luggage fs-5"></i> Mis reservas
+            </a>
+        </li>
+        <li>
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
+                <i class="bi bi-house-add fs-5"></i> Publicar casa
+            </a>
+        </li>
+    <?php endif; ?>
 
+    <!-- Cambio de modo -->
+    <?php if ($esAnfitrionReal): ?>
+        <li><hr class="dropdown-divider my-1"></li>
+        <?php if ($modoActual === 'anfitrion'): ?>
+            <li>
+                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="cambiar_modo.php?modo=huesped" style="color: var(--dv-forest);">
+                    <i class="bi bi-arrow-repeat fs-5"></i> Cambiar a Huésped
+                </a>
+            </li>
+        <?php else: ?>
+            <li>
+                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="cambiar_modo.php?modo=anfitrion" style="color: var(--dv-forest);">
+                    <i class="bi bi-arrow-repeat fs-5"></i> Cambiar a Anfitrión
+                </a>
+            </li>
+        <?php endif; ?>
+    <?php endif; ?>
+
+    <li><hr class="dropdown-divider my-1"></li>
+
+    <li>
+        <a class="dropdown-item rounded-3 py-2 text-danger d-flex align-items-center gap-2" href="cerrarsesion.php">
+            <i class="bi bi-box-arrow-right fs-5"></i> Cerrar sesión
+        </a>
+    </li>
+</ul>
+                    </div>
+
+                <?php else: ?>
+                    <!-- Usuarios no logueados -->
+                    <div class="d-flex align-items-center gap-3">
+                        <a href="registro.php" class="accion-texto">Registro</a>
+                        <a href="login.php" class="btn boton-ingresar shadow-sm">
+                            <i class="bi bi-person-circle fs-5"></i> Ingresar
+                        </a>
+                    </div>
+                <?php endif; ?>
             </div>
+
         </div>
     </nav>
 
