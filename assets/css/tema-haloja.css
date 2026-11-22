@@ -586,4 +586,65 @@ footer.border-top {
   }
 }
 
-/**/
+/*HEAAAAADERRRR*/
+
+/* =========================================
+   EFECTO DIFUMINADO (FROSTED GLASS)
+   ========================================= */
+.navbar-davinci.efecto-cristal {
+  background-color: rgba(250, 249, 246, 0.75) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px); /* Soporte para Safari */
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+/* =========================================
+   CENTRADO PERFECTO DE 3 BLOQUES (PC)
+   ========================================= */
+@media (min-width: 1200px) {
+  .navbar-davinci > .container-fluid {
+    display: flex !important;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* El menú colapsable debe ocupar todo el ancho restante */
+  .navbar-davinci .navbar-collapse {
+    display: flex !important;
+    flex-grow: 1;
+  }
+
+  .bloque-izquierdo {
+    flex: 1;
+    display: flex;
+    justify-content: flex-start;
+  }
+
+  .bloque-central {
+    flex: 2; /* Toma más espacio pero mantiene el eje central */
+    display: flex;
+    justify-content: center;
+  }
+
+  .bloque-derecho {
+    flex: 1;
+    display: flex;
+    justify-content: flex-end;
+  }
+}
+
+/* Estilo para los enlaces de texto con iconos */
+.accion-texto {
+  color: #173e3a;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.2s;
+}
+
+.accion-texto:hover {
+  color: #198754;
+}
