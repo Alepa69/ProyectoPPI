@@ -33,10 +33,10 @@ if (isset($_SESSION['id_usuario'])) {
     <nav class="navbar navbar-expand-xl navbar-davinci efecto-cristal sticky-top shadow-sm">
         <div class="container-fluid px-4">
             
-            <!-- BLOQUE IZQUIERDO: Marca -->
+         <!-- LOGO HALOJA -->
             <div class="bloque-izquierdo">
                 <a class="navbar-brand marca-davinci text-decoration-none m-0" href="index.php">
-                    <img src="assets/img/logo-davinci.png" alt="" width="36" height="36">
+                    <img src="assets/img/logo-haloja.png" alt="" width="36" height="36">
                     <span>HALOJA</span>
                 </a>
             </div>
@@ -52,7 +52,7 @@ if (isset($_SESSION['id_usuario'])) {
                 <div class="bloque-central mx-auto mt-3 mt-xl-0">
                     <ul class="navbar-nav d-flex gap-xl-4 p-0">
                         <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
-                            <!-- Vistas del Anfitrión -->
+                            <!-- Vistas del anfitrion -->
                             <li class="nav-item">
                                 <a class="nav-link accion-texto" href="panel_anfitrion.php">
                                     <i class="bi bi-calendar-check fs-5"></i> Reservas
@@ -64,7 +64,7 @@ if (isset($_SESSION['id_usuario'])) {
                                 </a>
                             </li>
                         <?php else: ?>
-                            <!-- Vistas del Huésped -->
+                            <!-- Vistas del huesped -->
                             <?php if (isset($_SESSION['id_usuario'])): ?>
                                 <li class="nav-item">
                                     <a class="nav-link accion-texto" href="modulos/reservas/mis_solicitudes.php">
@@ -85,11 +85,11 @@ if (isset($_SESSION['id_usuario'])) {
                     </ul>
                 </div>
 
-                <!-- BLOQUE DERECHO: Avatar y Sesión -->
+                <!-- PARTE DERECHA: Avatar y sesion usuario -->
                 <div class="bloque-derecho mt-3 mt-xl-0 pb-2 pb-xl-0">
                     <?php if (isset($_SESSION['id_usuario'])): ?>
                         
-                        <!-- Dropdown de Usuario -->
+                        <!-- Dropdown (tresflechasbroder) de Usuario -->
                         <div class="dropdown">
                             <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="border-color: #dee2e6 !important;">
                                 <i class="bi bi-list fs-5 ms-1" style="color: #173e3a;"></i>
@@ -119,7 +119,7 @@ if (isset($_SESSION['id_usuario'])) {
                         </div>
 
                     <?php else: ?>
-                        <!-- Usuarios no logueados -->
+                        <!-- usuarios q no se han logeado -->
                         <div class="d-flex align-items-center gap-3">
                             <a href="registro.php" class="accion-texto">Registro</a>
                             <a href="login.php" class="btn boton-ingresar shadow-sm">
