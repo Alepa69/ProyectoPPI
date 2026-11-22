@@ -42,28 +42,69 @@ if (isset($_SESSION['id_usuario'])) {
                 </a>
             </div>
 
-            <!-- CENTRO: Solo visible en la barra cuando está en MODO ANFITRIÓN (PC) -->
-            <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
-                <div class="bloque-central d-none d-lg-flex justify-content-center">
-                    <ul class="navbar-nav flex-row gap-2">
-                        <li class="nav-item">
-                            <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
-                                <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link accion-texto <?= $paginaActual === 'mis_alojamientos.php' ? 'active' : '' ?>" href="mis_alojamientos.php">
-                                <i class="bi bi-houses fs-5"></i> Mis alojamientos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php">
-                                <i class="bi bi-house-add fs-5"></i> Publicar casa
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            <?php endif; ?>
+<?php
+// Detectamos qué filtro de tipo está activo en la URL (si existe)
+$tipoActivo = $_GET['tipo'] ?? '';
+$enInicio = ($paginaActual === 'index.php');
+?>
+
+<?php
+// Detectamos el id_tipo activo en la URL (0 = Todos)
+$tipoActivo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
+$enInicio = ($paginaActual === 'index.php');
+?>
+
+<!-- CENTRO: Opciones según el modo -->
+<div class="bloque-central d-none d-lg-flex justify-content-center">
+    <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
+        
+        <!-- MODO ANFITRIÓN -->
+        <ul class="navbar-nav flex-row gap-2">
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
+                    <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= $paginaActual === 'mis_alojamientos.php' ? 'active' : '' ?>" href="mis_alojamientos.php">
+                    <i class="bi bi-houses fs-5"></i> Mis alojamientos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php">
+                    <i class="bi bi-house-add fs-5"></i> Publicar casa
+                </a>
+            </li>
+        </ul>
+
+    <?php else: ?>
+
+        <!-- MODO HUÉSPED / VISITANTE: Tipos de Alojamiento por id_tipo -->
+        <ul class="navbar-nav flex-row gap-2">
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="index.php">
+                    <i class="bi bi-grid fs-5"></i> Todos
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="index.php?tipo=1">
+                    <i class="bi bi-house-door fs-5"></i> Casa
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="index.php?tipo=2">
+                    <i class="bi bi-building fs-5"></i> Apartamento
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="index.php?tipo=3">
+                    <i class="bi bi-door-open fs-5"></i> Habitación
+                </a>
+            </li>
+        </ul>
+
+    <?php endif; ?>
+</div>
 
             <!-- DERECHA: Menú de usuario o Acceso -->
             <div class="bloque-derecho d-flex align-items-center justify-content-end">
@@ -170,6 +211,26 @@ if (isset($_SESSION['id_usuario'])) {
             </div>
 
         </div>
+
+        <!-- Barra de categorías solo visible en celulares/tablets (Modo Huésped) -->
+    <?php if (!isset($_SESSION['id_usuario']) || $modoActual !== 'anfitrion'): ?>
+        <div class="d-flex d-lg-none overflow-auto border-top px-3 py-2 gap-2" style="scrollbar-width: none;">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === '') ? 'active' : '' ?>" href="index.php">
+                <i class="bi bi-grid"></i> Todos
+            </a>
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Casa') ? 'active' : '' ?>" href="index.php?tipo=Casa">
+                <i class="bi bi-house-door"></i> Casa
+            </a>
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Apartamento') ? 'active' : '' ?>" href="index.php?tipo=Apartamento">
+                <i class="bi bi-building"></i> Apartamento
+            </a>
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Habitación') ? 'active' : '' ?>" href="index.php?tipo=Habitación">
+                <i class="bi bi-door-open"></i> Habitación
+            </a>
+        </div>
+    <?php endif; ?>
+</nav>
+
     </nav>
 
     <div class="container mb-5">

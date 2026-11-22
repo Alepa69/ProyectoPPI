@@ -2,6 +2,7 @@
 require_once __DIR__ . '/config/conexion.php';
 
 // Filtros del listado
+$tipo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
 $casa_titulo = isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']) : '';
 $precio_minimo = isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : '';
 $precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
@@ -40,6 +41,27 @@ JOIN usuarios u ON a.id_anfitrion = u.id_usuario
 LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
 WHERE a.estado = 'publicado'";
 
+if ($tipo > 0) {
+    $sql .= " AND a.id_tipo = ?";
+    $params[] = $tipo;
+    $types .= "i";
+}
+if (!empty($casa_titulo)) {
+    $sql .= " AND a.titulo LIKE ?";
+    $params[] = "%" . $casa_titulo . "%";
+    $types .= "s";
+}
+if ($precio_minimo !== '') {
+    $sql .= " AND {$precioExpr} >= ?";
+    $params[] = (float)$precio_minimo;
+    $types .= "d";
+}
+if ($precio_maximo !== '') {
+    $sql .= " AND {$precioExpr} <= ?";
+    $params[] = (float)$precio_maximo;
+    $types .= "d";
+}
+
 if (!empty($casa_titulo)) {
     $sql .= " AND a.titulo LIKE ?";
     $params[] = "%" . $casa_titulo . "%";
@@ -76,7 +98,10 @@ $pageTitle = 'Menú principal';
 
 <?php include __DIR__ . '/includes/header.php'; ?>
 
-    <form action="" method="GET" class="card shadow-sm border-0 rounded-4 p-3 mb-4">
+<form action="" method="GET" class="card shadow-sm border-0 rounded-4 p-3 mb-4">
+        <?php if ($tipo > 0): ?>
+            <input type="hidden" name="tipo" value="<?= $tipo ?>">
+        <?php endif; ?>
         <div class="row g-3 align-items-end">
             <div class="col-12 col-md-4">
                 <label for="casa_titulo" class="form-label small fw-semibold">Buscar por nombre</label>
