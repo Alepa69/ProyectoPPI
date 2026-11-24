@@ -5,6 +5,10 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/config/conexion.php';
 $mensaje="";
+$registroExitoso = false;
+$nombre = "";
+$apellido = "";
+$correo = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $nombre = trim($_POST['nombre']??'');
@@ -32,7 +36,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             try {
                 if ($stmt->execute()) {
-                    $mensaje = "<div class='alert alert-success'>Cuenta creada, inicia sesion <a href='login.php' class='alert-link'>iniciar sesion</a>.</div>";
+                    $registroExitoso = true;
+                    $nombre = "";
+                    $apellido = "";
+                    $correo = "";
                 }
             } catch (mysqli_sql_exception $e) {
                 
@@ -67,16 +74,16 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre:</label>
-                            <input type="text" name="nombre" class="form-control" required>
+                            <input type="text" name="nombre" class="form-control" value="<?= htmlspecialchars($nombre) ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Apellido:</label>
-                            <input type="text" name="apellido" class="form-control" required>
+                            <input type="text" name="apellido" class="form-control" value="<?= htmlspecialchars($apellido) ?>" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Correo electronico:</label>
-                        <input type="email" name="correo" class="form-control" required>
+                        <input type="email" name="correo" class="form-control" value="<?= htmlspecialchars($correo) ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Contraseña:</label>
@@ -97,7 +104,28 @@ require_once __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<?php if ($registroExitoso): ?>
+<div class="modal fade" id="modalExito" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <h4 class="mb-3">Cuenta creada con exito</h4>
+                <p>Tu cuenta ha sido registrada correctamente.</p>
+                <a href="index.php" class="btn btn-dark px-4">OK</a>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<?php if ($registroExitoso): ?>
+<script>
+    var modal = new bootstrap.Modal(document.getElementById('modalExito'));
+    modal.show();
+</script>
+<?php endif; ?>
 </body>
 </html>
