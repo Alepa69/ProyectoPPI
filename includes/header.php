@@ -58,7 +58,7 @@ $enInicio = ($paginaActual === 'index.php');
 <div class="bloque-central d-none d-lg-flex justify-content-center">
     <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
         
-        <!-- MODO ANFITRIÓN -->
+        <!-- MODO ANFITRIÓN
         <ul class="navbar-nav flex-row gap-2">
             <li class="nav-item">
                 <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
@@ -75,7 +75,7 @@ $enInicio = ($paginaActual === 'index.php');
                     <i class="bi bi-house-add fs-5"></i> Publicar casa
                 </a>
             </li>
-        </ul>
+        </ul> -->
 
     <?php else: ?>
 
