@@ -689,8 +689,8 @@ footer.border-top {
 .hero-buscador {
   display: grid;
   grid-template-columns:
-    minmax(210px, 2fr) minmax(110px, 1fr) minmax(110px, 1fr)
-    minmax(145px, 1.2fr) auto;
+    minmax(170px, 1.8fr) minmax(135px, 1.2fr) minmax(95px, 0.9fr)
+    minmax(95px, 0.9fr) minmax(130px, 1.1fr) auto;
   align-items: center;
   padding: 10px 10px 10px 14px;
   border: 1px solid rgba(255, 255, 255, 0.65);

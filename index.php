@@ -4,9 +4,72 @@ require_once __DIR__ . '/config/conexion.php';
 // Filtros del listado
 $tipo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
 $casa_titulo = isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']) : '';
+$departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
 $precio_minimo = isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : '';
 $precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
+
+$mapLat = 13.69;
+$mapLng = -89.23;
+
+switch ($departamento) {
+    case 'Ahuachapán':
+        $mapLat = 13.9214;
+        $mapLng = -89.8450;
+        break;
+    case 'Cabañas':
+        $mapLat = 13.8767;
+        $mapLng = -88.6297;
+        break;
+    case 'Chalatenango':
+        $mapLat = 14.0333;
+        $mapLng = -88.9333;
+        break;
+    case 'Cuscatlán':
+        $mapLat = 13.7167;
+        $mapLng = -88.9333;
+        break;
+    case 'La Libertad':
+        $mapLat = 13.6769;
+        $mapLng = -89.2797;
+        break;
+    case 'La Paz':
+        $mapLat = 13.5000;
+        $mapLng = -88.8667;
+        break;
+    case 'La Unión':
+        $mapLat = 13.3369;
+        $mapLng = -87.8439;
+        break;
+    case 'Morazán':
+        $mapLat = 13.6967;
+        $mapLng = -88.1061;
+        break;
+    case 'San Miguel':
+        $mapLat = 13.4833;
+        $mapLng = -88.1833;
+        break;
+    case 'San Salvador':
+        $mapLat = 13.6929;
+        $mapLng = -89.2182;
+        break;
+    case 'San Vicente':
+        $mapLat = 13.6333;
+        $mapLng = -88.8000;
+        break;
+    case 'Santa Ana':
+        $mapLat = 13.9942;
+        $mapLng = -89.5597;
+        break;
+    case 'Sonsonate':
+        $mapLat = 13.7189;
+        $mapLng = -89.7242;
+        break;
+    case 'Usulután':
+        $mapLat = 13.3500;
+        $mapLng = -88.4500;
+        break;
+}
 
 $params = [];
 $types = '';
@@ -49,6 +112,11 @@ if ($tipo > 0) {
 if (!empty($casa_titulo)) {
     $sql .= " AND a.titulo LIKE ?";
     $params[] = "%" . $casa_titulo . "%";
+    $types .= "s";
+}
+if (!empty($departamento)) {
+    $sql .= " AND a.departamento = ?";
+    $params[] = $departamento;
     $types .= "s";
 }
 if ($precio_minimo !== '') {
@@ -106,6 +174,27 @@ $heroImagen = 'assets/img/ilopango.jpg';
                 <label for="casa_titulo" class="hero-buscador__label">Buscar por nombre</label>
                 <input type="text" id="casa_titulo" name="casa_titulo" class="form-control"
                        placeholder="Ej. Zona Rosa, Escalón..." value="<?= htmlspecialchars($casa_titulo) ?>">
+            </div>
+
+            <div class="hero-buscador__campo hero">
+                <label for="departamento" class="hero-buscador__label">Departamento</label>
+                <select name="departamento" id="departamento" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Ahuachapán" <?= $departamento === 'Ahuachapán' ? 'selected' : '' ?>>Ahuachapán</option>
+                    <option value="Cabañas" <?= $departamento === 'Cabañas' ? 'selected' : '' ?>>Cabañas</option>
+                    <option value="Chalatenango" <?= $departamento === 'Chalatenango' ? 'selected' : '' ?>>Chalatenango</option>
+                    <option value="Cuscatlán" <?= $departamento === 'Cuscatlán' ? 'selected' : '' ?>>Cuscatlán</option>
+                    <option value="La Libertad" <?= $departamento === 'La Libertad' ? 'selected' : '' ?>>La Libertad</option>
+                    <option value="La Paz" <?= $departamento === 'La Paz' ? 'selected' : '' ?>>La Paz</option>
+                    <option value="La Unión" <?= $departamento === 'La Unión' ? 'selected' : '' ?>>La Unión</option>
+                    <option value="Morazán" <?= $departamento === 'Morazán' ? 'selected' : '' ?>>Morazán</option>
+                    <option value="San Miguel" <?= $departamento === 'San Miguel' ? 'selected' : '' ?>>San Miguel</option>
+                    <option value="San Salvador" <?= $departamento === 'San Salvador' ? 'selected' : '' ?>>San Salvador</option>
+                    <option value="San Vicente" <?= $departamento === 'San Vicente' ? 'selected' : '' ?>>San Vicente</option>
+                    <option value="Santa Ana" <?= $departamento === 'Santa Ana' ? 'selected' : '' ?>>Santa Ana</option>
+                    <option value="Sonsonate" <?= $departamento === 'Sonsonate' ? 'selected' : '' ?>>Sonsonate</option>
+                    <option value="Usulután" <?= $departamento === 'Usulután' ? 'selected' : '' ?>>Usulután</option>
+                </select>
             </div>
 
             <div class="hero-buscador__campo">
@@ -170,7 +259,7 @@ $heroImagen = 'assets/img/ilopango.jpg';
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const casas = <?= json_encode($casas) ?>;
-    const map = L.map('map').setView([13.69, -89.23], 12);
+    const map = L.map('map').setView([<?= $mapLat ?>, <?= $mapLng ?>], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
