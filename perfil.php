@@ -58,8 +58,15 @@ include __DIR__ . '/includes/header.php';
                 <span class="badge bg-success"><?= ucfirst($usuario['estado']) ?></span>
                 
                 <hr>
-                <a href="editar_perfil.php" class="btn btn-outline-dark w-100">Editar mis datos</a>
+                <a href="editar_perfil.php" class="btn btn-dark rounded-pill px-4">Editar mis datos</a>
             </div>
+        </div>
+
+        <!-- Botón de regreso al inicio debajo de la tarjeta -->
+        <div class="d-grid mt-3">
+            <a href="index.php" class="btn btn-outline-success rounded-pill py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al inicio
+            </a>
         </div>
     </div>
 
@@ -90,8 +97,9 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="modulos/reservas/mis_solicitudes.php" class="btn btn-sm btn-outline-primary">Ver mis solicitudes de reserva</a>
-                </div>
+<a href="modulos/reservas/mis_solicitudes.php" class="btn btn-dark rounded-pill px-4">
+    Ver mis solicitudes de reserva
+</a>                </div>
             </div>
         </div>
 

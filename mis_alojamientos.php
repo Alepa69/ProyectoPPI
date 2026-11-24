@@ -25,7 +25,7 @@ include __DIR__ . '/includes/header.php';
 
 <!-- Botón Volver -->
 <div class="mb-3">
-    <a href="panel_anfitrion.php" class="btn btn-outline-secondary rounded-pill btn-sm">
+    <a href="index.php" class="btn btn-outline-secondary rounded-pill btn-sm">
         &larr; Volver al panel
     </a>
 </div>
