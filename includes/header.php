@@ -37,7 +37,7 @@ if (isset($_SESSION['id_usuario'])) {
             <!-- IZQUIERDA: Marca y Logo -->
             <div class="bloque-izquierdo">
                 <a class="navbar-brand marca-davinci text-decoration-none m-0" href="index.php">
-                    <img src="assets/img/logo-davinci.png" alt="Logo Haloja" width="36" height="36">
+                    <img src="assets/img/logo-haloja.png" alt="Logo Haloja" width="36" height="36">
                     <span>HALOJA</span>
                 </a>
             </div>

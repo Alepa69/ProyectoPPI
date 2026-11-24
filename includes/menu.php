@@ -5,7 +5,7 @@
 
         <!-- Marca e icono -->
         <a class="navbar-brand marca-davinci" href="index.php">
-            <img src="assets/img/logo-davinci.png"
+            <img src="assets/img/logo-haloja.png"
                  alt=""
                  width="36"
                  height="36">
