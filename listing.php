@@ -31,7 +31,42 @@ function leerFecha($valor): ?DateTimeImmutable
     return $fecha && $fecha->format('Y-m-d') === $valor ? $fecha : null;
 }
 
+// Verificar si el usuario actual es administrador activo.
+$idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
+$esAdmin = false;
+
+if ($idUsuario > 0) {
+    $stmtRol = $conexion->prepare("
+        SELECT rol, estado
+        FROM usuarios
+        WHERE id_usuario = ?
+        LIMIT 1
+    ");
+    $stmtRol->bind_param('i', $idUsuario);
+    $stmtRol->execute();
+    $datosRol = $stmtRol->get_result()->fetch_assoc();
+    $stmtRol->close();
+
+    $esAdmin = $datosRol
+        && $datosRol['rol'] === 'administrador'
+        && $datosRol['estado'] === 'activo';
+}
+
+$adminFlash = null;
+if ($esAdmin) {
+    if (empty($_SESSION['csrf_admin'])) {
+        $_SESSION['csrf_admin'] = bin2hex(random_bytes(32));
+    }
+    if (!empty($_SESSION['admin_flash'])) {
+        $adminFlash = $_SESSION['admin_flash'];
+        unset($_SESSION['admin_flash']);
+    }
+}
+
 // Información general del alojamiento y del anfitrión.
+// El administrador puede ver publicaciones en cualquier estado; el resto solo publicadas.
+$filtroEstado = $esAdmin ? '' : " AND a.estado = 'publicado'";
+
 $consulta = $conexion->prepare("
     SELECT
         a.id_alojamiento, a.titulo, a.descripcion, a.pais,
@@ -41,14 +76,14 @@ $consulta = $conexion->prepare("
         a.hora_checkin, a.hora_checkout, a.estancia_minima,
         a.permite_mascotas, a.permite_fumar, a.permite_eventos,
         a.reglas_adicionales, a.precio_persona_noche, a.precio_noche,
-        a.tarifa_limpieza, a.id_anfitrion,
+        a.tarifa_limpieza, a.id_anfitrion, a.estado, a.motivo_bloqueo,
         u.nombre AS nombre_anfitrion, u.apellido AS apellido_anfitrion,
         u.creado_en AS anfitrion_desde,
         t.nombre AS tipo_alojamiento
     FROM alojamientos AS a
     INNER JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion
     LEFT JOIN tipos_alojamiento AS t ON t.id_tipo = a.id_tipo
-    WHERE a.id_alojamiento = ? AND a.estado = 'publicado'
+    WHERE a.id_alojamiento = ?{$filtroEstado}
     LIMIT 1
 ");
 $consulta->bind_param('i', $id);
@@ -117,7 +152,6 @@ while ($amenidad = $resultadoAmenidades->fetch_assoc()) {
 $consultaAmenidades->close();
 
 // Datos derivados para la presentación.
-$idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
 $esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
 $hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
 $error = '';
@@ -163,7 +197,7 @@ if (empty($_SESSION['csrf_reserva'])) {
     $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
 }
 
-// Se conserva el proceso original de solicitud de reserva.
+// Proceso de solicitud de reserva.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $entrada = leerFecha($_POST['entrada'] ?? null);
     $salida = leerFecha($_POST['salida'] ?? null);
@@ -172,6 +206,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (!$idUsuario || $esAnfitrion) {
         $error = 'Inicia sesión con una cuenta distinta a la del anfitrión.';
+    } elseif ($casa['estado'] !== 'publicado') {
+        $error = 'Este alojamiento no está disponible para reservas en este momento.';
     } elseif (!is_string($token) || !hash_equals($_SESSION['csrf_reserva'], $token)) {
         $error = 'Recarga la página y vuelve a intentarlo.';
     } elseif (!$entrada || !$salida || $entrada < $hoy || $salida <= $entrada) {
@@ -190,8 +226,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             )
             SELECT a.id_alojamiento, u.id_usuario, datos.entrada, datos.salida,
                    datos.huespedes, a.precio_persona_noche,
-                   DATEDIFF(datos.salida, datos.entrada)
-                       * datos.huespedes * a.precio_persona_noche,
+                   DATEDIFF(datos.salida, datos.entrada) * datos.huespedes * a.precio_persona_noche,
                    'pendiente'
             FROM alojamientos AS a
             JOIN usuarios AS u ON u.id_usuario = ? AND u.estado = 'activo'
@@ -241,10 +276,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="index.php#alojamientos" class="listing-back-link">
                 <span aria-hidden="true">←</span> Volver a alojamientos
             </a>
-            <?php if ($esAnfitrion): ?>
-                <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
-            <?php endif; ?>
+
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <?php if ($esAnfitrion): ?>
+                    <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
+                <?php endif; ?>
+
+                <?php if ($esAdmin): ?>
+                    <a href="admin.php?tab=alojamientos" class="btn btn-outline-dark btn-sm">Panel Admin</a>
+                    <span class="badge <?= $casa['estado'] === 'publicado' ? 'bg-success' : 'bg-danger' ?>">
+                        Estado: <?= escapar(ucfirst($casa['estado'])) ?>
+                    </span>
+
+                    <form method="post" action="admin_acciones.php" class="d-inline-flex gap-2">
+                        <input type="hidden" name="csrf" value="<?= escapar($_SESSION['csrf_admin']) ?>">
+                        <input type="hidden" name="tipo" value="alojamiento">
+                        <input type="hidden" name="id" value="<?= (int) $id ?>">
+                        <input type="hidden" name="volver_a" value="listing.php?id=<?= (int) $id ?>">
+
+                        <?php if ($casa['estado'] === 'publicado'): ?>
+                            <button type="button" class="btn btn-warning btn-sm" onclick="bloquearPublicacion(this.form)">
+                                Desactivar publicación
+                            </button>
+                        <?php else: ?>
+                            <button type="submit" name="accion" value="activar" class="btn btn-success btn-sm">
+                                Reactivar publicación
+                            </button>
+                        <?php endif; ?>
+
+                        <button type="submit" name="accion" value="eliminar" class="btn btn-danger btn-sm"
+                                onclick="return confirm('¿Eliminar permanentemente esta publicación y sus reservas asociadas?')">
+                            Borrar publicación
+                        </button>
+                    </form>
+                <?php endif; ?>
+            </div>
         </div>
+
+        <?php if ($adminFlash): ?>
+            <div class="alert alert-<?= escapar($adminFlash['tipo']) ?> alert-dismissible fade show mt-3" role="alert">
+                <?= escapar($adminFlash['mensaje']) ?>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($esAdmin && $casa['estado'] !== 'publicado'): ?>
+            <div class="alert alert-warning mt-3" role="alert">
+                <strong>Vista de administrador:</strong> Esta publicación tiene estado <strong><?= escapar($casa['estado']) ?></strong> y está oculta para los demás usuarios.
+                <?php if (!empty($casa['motivo_bloqueo'])): ?>
+                    <br><span>Motivo registrado: <?= escapar($casa['motivo_bloqueo']) ?></span>
+                <?php endif; ?>
+            </div>
+        <?php endif; ?>
 
         <header class="listing-heading">
             <div>
@@ -380,7 +463,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="alert alert-danger" role="alert"><?= escapar($error) ?></p>
                     <?php endif; ?>
 
-                    <?php if (!$idUsuario): ?>
+                    <?php if ($casa['estado'] !== 'publicado'): ?>
+                        <p class="listing-login-note">Las reservas están deshabilitadas porque esta publicación no se encuentra activa.</p>
+                    <?php elseif (!$idUsuario): ?>
                         <p class="listing-login-note">Inicia sesión para solicitar una reserva.</p>
                         <a href="login.php" class="btn btn-success w-100 mt-2">Iniciar sesión</a>
                     <?php elseif ($esAnfitrion): ?>
@@ -474,6 +559,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         });
     }
+
+    <?php if ($esAdmin): ?>
+    function bloquearPublicacion(form) {
+        const motivo = prompt('Indica el motivo de la desactivación/bloqueo (opcional):', 'Incumplimiento de normas de la plataforma');
+        if (motivo === null) return;
+
+        const inputAccion = document.createElement('input');
+        inputAccion.type = 'hidden';
+        inputAccion.name = 'accion';
+        inputAccion.value = 'suspender';
+
+        const inputMotivo = document.createElement('input');
+        inputMotivo.type = 'hidden';
+        inputMotivo.name = 'motivo';
+        inputMotivo.value = motivo.trim();
+
+        form.appendChild(inputAccion);
+        form.appendChild(inputMotivo);
+        form.submit();
+    }
+    <?php endif; ?>
 </script>
 </body>
 </html>
