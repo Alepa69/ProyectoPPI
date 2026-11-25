@@ -35,17 +35,12 @@ function normalizarHora(string $valor): ?string
 }
 
 /**
- * Resuelve el ID del anfitrion desde sesion o usuario activo de respaldo.
+ * Resuelve el ID del anfitrion únicamente desde la sesión activa.
  */
-function resolverAnfitrionId(mysqli $conexion): ?int
+function resolverAnfitrionId(): ?int
 {
     if (!empty($_SESSION['id_usuario'])) {
         return (int)$_SESSION['id_usuario'];
-    }
-
-    $res = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' ORDER BY id_usuario ASC LIMIT 1");
-    if ($res && $fila = $res->fetch_assoc()) {
-        return (int)$fila['id_usuario'];
     }
 
     return null;
@@ -154,9 +149,9 @@ function ejecutarPublicacionAlojamiento(mysqli $conexion, ?int $idAnfitrion = nu
     $errores = [];
     $archivosSubidos = [];
 
-    $idAnfitrion = $idAnfitrion ?? resolverAnfitrionId($conexion);
+    $idAnfitrion = $idAnfitrion ?? resolverAnfitrionId();
     if (!$idAnfitrion || $idAnfitrion <= 0) {
-        return ['ok' => false, 'errores' => ['No se encontro un anfitrion valido en sesion.']];
+        return ['ok' => false, 'errores' => ['Debes iniciar sesión para publicar un alojamiento.']];
     }
 
     // Campos principales
@@ -439,7 +434,15 @@ function ejecutarPublicacionAlojamiento(mysqli $conexion, ?int $idAnfitrion = nu
 $esEntradaDirecta = basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'procesar_publicacion.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $resultado = ejecutarPublicacionAlojamiento($conexion, $id_anfitrion ?? null);
+    if (empty($_SESSION['id_usuario'])) {
+        if (esPeticionJson()) {
+            responderJson(401, ['ok' => false, 'error' => 'Debes iniciar sesión para publicar un alojamiento.']);
+        }
+        header('Location: login.php');
+        exit;
+    }
+
+    $resultado = ejecutarPublicacionAlojamiento($conexion, (int)$_SESSION['id_usuario']);
 
     if (esPeticionJson()) {
         if ($resultado['ok']) {

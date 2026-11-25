@@ -11,7 +11,7 @@ $conexion = new mysqli(
     $config['usuario'],
     $config['clave'],
     $config['base_datos'],
-    $config['puerto']
+    $config['puerto'] ?? 3306
 );
 
 if ($conexion->connect_error) {

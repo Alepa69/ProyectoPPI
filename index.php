@@ -242,7 +242,7 @@ $heroImagen = 'assets/img/ilopango.jpg';
                 <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
                 <div class="card-body">
                     <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
-                    <p class="text-muted small mb-2">nombre:<?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?></p>
+                    <p class="text-muted small mb-2"><?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?></p>
                     <div class="d-flex justify-content-between align-items-center">
                         <span class="fw-bold text-primary">$<?= number_format((float)$p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">la noche</small></span>
                     </div>
