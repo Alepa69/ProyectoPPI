@@ -2,9 +2,10 @@
 require_once __DIR__ . '/config/conexion.php';
 
 // Filtros del listado
-$tipo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
+$tipo = isset($_GET['tipo']) ? (int) $_GET['tipo'] : 0;
 $casa_titulo = isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']) : '';
 $departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
+$huespedes = (isset($_GET['huespedes']) && $_GET['huespedes'] !== '') ? (int) $_GET['huespedes'] : 0;
 $precio_minimo = isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : '';
 $precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
@@ -80,6 +81,7 @@ $sql = "SELECT
     a.titulo,
     COALESCE(NULLIF(a.ciudad, ''), a.municipio) AS municipio,
     a.departamento,
+    a.capacidad,
     {$precioExpr} AS precio_persona_noche,
     a.latitud,
     a.longitud,
@@ -102,7 +104,8 @@ $sql = "SELECT
 FROM alojamientos a
 JOIN usuarios u ON a.id_anfitrion = u.id_usuario
 LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
-WHERE a.estado = 'publicado'";
+WHERE a.estado = 'publicado'
+  AND u.estado = 'activo'";
 
 if ($tipo > 0) {
     $sql .= " AND a.id_tipo = ?";
@@ -110,26 +113,33 @@ if ($tipo > 0) {
     $types .= "i";
 }
 if (!empty($casa_titulo)) {
-    $sql .= " AND a.titulo LIKE ?";
-    $params[] = "%" . $casa_titulo . "%";
-    $types .= "s";
+    $sql .= " AND (a.titulo LIKE ? OR a.municipio LIKE ? OR a.ciudad LIKE ?)";
+    $busqueda = "%" . $casa_titulo . "%";
+    $params[] = $busqueda;
+    $params[] = $busqueda;
+    $params[] = $busqueda;
+    $types .= "sss";
 }
 if (!empty($departamento)) {
     $sql .= " AND a.departamento = ?";
     $params[] = $departamento;
     $types .= "s";
 }
+if ($huespedes > 0) {
+    $sql .= " AND a.capacidad >= ?";
+    $params[] = $huespedes;
+    $types .= "i";
+}
 if ($precio_minimo !== '') {
     $sql .= " AND {$precioExpr} >= ?";
-    $params[] = (float)$precio_minimo;
+    $params[] = (float) $precio_minimo;
     $types .= "d";
 }
 if ($precio_maximo !== '') {
     $sql .= " AND {$precioExpr} <= ?";
-    $params[] = (float)$precio_maximo;
+    $params[] = (float) $precio_maximo;
     $types .= "d";
 }
-
 
 if ($orden === 'precio_asc') {
     $sql .= " ORDER BY precio_persona_noche ASC";
@@ -152,8 +162,6 @@ $heroImagen = 'assets/img/ilopango.jpg';
 
 <?php include __DIR__ . '/includes/header.php'; ?>
 
-<!-- OPCIÓN 1 (diseño sin bordes):  class="hero-haloja mb-5" -->
-<!-- OPCIÓN 2 (borde a borde):  class="hero-haloja hero-haloja--full mb-5" -->
 <section class="hero-haloja hero-haloja--full mb-5">
     <img src="<?= htmlspecialchars($heroImagen, ENT_QUOTES, 'UTF-8') ?>" alt="" class="hero-haloja__bg">
     <div class="hero-haloja__contenido">
@@ -171,12 +179,12 @@ $heroImagen = 'assets/img/ilopango.jpg';
             <?php endif; ?>
 
             <div class="hero-buscador__campo hero-buscador__campo--grande">
-                <label for="casa_titulo" class="hero-buscador__label">Buscar por nombre</label>
+                <label for="casa_titulo" class="hero-buscador__label">Buscar lugar</label>
                 <input type="text" id="casa_titulo" name="casa_titulo" class="form-control"
                        placeholder="Ej. Zona Rosa, Escalón..." value="<?= htmlspecialchars($casa_titulo) ?>">
             </div>
 
-            <div class="hero-buscador__campo hero">
+            <div class="hero-buscador__campo">
                 <label for="departamento" class="hero-buscador__label">Departamento</label>
                 <select name="departamento" id="departamento" class="form-select">
                     <option value="">Todos</option>
@@ -195,6 +203,12 @@ $heroImagen = 'assets/img/ilopango.jpg';
                     <option value="Sonsonate" <?= $departamento === 'Sonsonate' ? 'selected' : '' ?>>Sonsonate</option>
                     <option value="Usulután" <?= $departamento === 'Usulután' ? 'selected' : '' ?>>Usulután</option>
                 </select>
+            </div>
+
+            <div class="hero-buscador__campo">
+                <label for="huespedes" class="hero-buscador__label">Huéspedes</label>
+                <input type="number" id="huespedes" name="huespedes" class="form-control"
+                       placeholder="Cualquiera" min="1" value="<?= $huespedes > 0 ? $huespedes : '' ?>">
             </div>
 
             <div class="hero-buscador__campo">
@@ -230,30 +244,30 @@ $heroImagen = 'assets/img/ilopango.jpg';
     </div>
 </section>
 
-    <div>
-      <h2>Casas disponibles</h2>
+    <div id="alojamientos">
+      <h2>Alojamientos disponibles</h2>
       <aside>
         <?php if (count($casas) === 0): ?>
-        <p class="text-muted">No se han encontrado casas disponibles</p>
+        <p class="text-muted">No se han encontrado alojamientos disponibles con esos filtros.</p>
         <?php endif; ?>
 
         <?php foreach ($casas as $p): ?>
           <div class="card border shadow-sm mb-3 overflow-hidden">
-                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
+                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" loading="lazy" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
                 <div class="card-body">
                     <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
-                    <p class="text-muted small mb-2">nombre:<?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?></p>
+                    <p class="text-muted small mb-2"><?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?> · Hasta <?= (int) $p['capacidad'] ?> huéspedes</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary">$<?= number_format((float)$p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">la noche</small></span>
+                        <span class="fw-bold text-primary">$<?= number_format((float) $p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">/ persona · noche</small></span>
                     </div>
-                    <span class="text-muted small d-block mt-2 mb-3">Anfitrion: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
-                    <a href="listing.php?id=<?= (int)$p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">ver detalles</a>
+                    <span class="text-muted small d-block mt-2 mb-3">Anfitrión: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
+                    <a href="listing.php?id=<?= (int) $p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">Ver detalles</a>
                 </div>
             </div>
         <?php endforeach; ?>
       </aside>
 
-      <div id="map" style="height: 400px;"></div>
+      <div id="map" style="height: 420px;"></div>
     </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -270,12 +284,29 @@ $heroImagen = 'assets/img/ilopango.jpg';
         if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
         const popup = document.createElement('div');
+        popup.style.width = '190px';
+
+        const img = document.createElement('img');
+        img.src = c.foto_principal;
+        img.alt = c.titulo;
+        img.style.width = '100%';
+        img.style.height = '105px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '8px';
+        img.style.marginBottom = '6px';
+        popup.appendChild(img);
+
         const link = document.createElement('a');
         link.href = 'listing.php?id=' + encodeURIComponent(c.id_alojamiento);
         link.textContent = c.titulo;
+        link.style.display = 'block';
         popup.appendChild(link);
-        popup.appendChild(document.createElement('br'));
-        popup.appendChild(document.createTextNode('$' + c.precio_persona_noche + ' / noche'));
+
+        const precio = document.createElement('span');
+        precio.textContent = '$' + Number(c.precio_persona_noche).toFixed(2) + ' / persona · noche';
+        precio.style.fontSize = '0.82rem';
+        precio.style.color = '#495057';
+        popup.appendChild(precio);
 
         L.marker([lat, lng]).addTo(map).bindPopup(popup);
     });

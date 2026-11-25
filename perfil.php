@@ -97,9 +97,10 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
                 <div class="text-end mt-3">
-<a href="modulos/reservas/mis_solicitudes.php" class="btn btn-dark rounded-pill px-4">
-    Ver mis solicitudes de reserva
-</a>                </div>
+                    <a href="panel_cliente.php" class="btn btn-dark rounded-pill px-4">
+                        Ver mis solicitudes de reserva
+                    </a>
+                </div>
             </div>
         </div>
 

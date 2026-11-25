@@ -26,8 +26,14 @@ if (!$reserva) {
     exit('La reserva no existe.');
 }
 
-$esCliente=($idUsuario===(int)$reserva['id_solicitante']);
-$esAnfitrion=($idUsuario===(int)$reserva['id_anfitrion']);
+$esCliente = ($idUsuario === (int)$reserva['id_solicitante']);
+$esAnfitrion = ($idUsuario === (int)$reserva['id_anfitrion']);
+
+// Solo el cliente o el anfitrión de la reserva pueden ver o escribir en este chat
+if (!$esCliente && !$esAnfitrion) {
+    http_response_code(403);
+    exit('No tienes permiso para acceder a este chat.');
+}
 
 //guarda el mensaje
 if ($_SERVER['REQUEST_METHOD']==='POST') {
@@ -106,7 +112,8 @@ include __DIR__ . '/includes/header.php';
 </form>
 
 <script>
-    //scrolea hasta el ultimo mensaje
+    // Scrollea hasta el último mensaje
+    const caja = document.getElementById('caja-mensajes');
     if (caja) {
         caja.scrollTop = caja.scrollHeight;
     }

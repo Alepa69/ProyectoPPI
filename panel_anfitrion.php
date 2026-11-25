@@ -158,7 +158,7 @@ include __DIR__ . '/includes/header.php';
                                     <span class="text-muted small">—</span>
                                 <?php endif; ?>
 
-                                <a href="chat.php?id_reserva=<?= (int) $r['id_reserva'] ?>" class="btn btn-sm btn-outline-primary">Chat</a>
+                                <a href="chat.php?id_reserva=<?= (int) $r['id_reserva'] ?>" class="btn btn-dark rounded-pill px-3">Chat</a>
 
                             </td>
                         </tr>
