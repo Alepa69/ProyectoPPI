@@ -1,24 +1,25 @@
 START TRANSACTION;
 
 -- --------------------------------------------------------
--- 1. USUARIOS ADICIONALES (IDs 2 al 5)
--- Nota: Usan el mismo password_hash que tu usuario Daniel (id 1)
--- para que puedas iniciar sesión con cualquiera usando tu misma contraseña.
+-- 1. USUARIOS DE PRUEBA (IDs 1 al 5)
+-- Nota: Usan el mismo password_hash para pruebas locales.
+-- El usuario 1 queda como administrador si no existe aun en la BD.
 -- --------------------------------------------------------
-INSERT INTO `usuarios` (
+INSERT IGNORE INTO `usuarios` (
   `id_usuario`, `nombre`, `apellido`, `correo`, `password_hash`,
   `telefono`, `rol`, `estado`, `creado_en`, `actualizado_en`
 ) VALUES
+(1, 'Daniel', 'Alfaro', 'admin@haloja.test', '$2y$10$RfMVTAH/LERhwkUEve7L0eUmZJGpV.vvfBa8jHz.6fCPe0856wfDe', '7000-0001', 'administrador', 'activo', '2026-11-09 08:00:00', '2026-11-09 08:00:00'),
 (2, 'Sofía', 'Méndez', 'sofia.mendez@haloja.test', '$2y$10$RfMVTAH/LERhwkUEve7L0eUmZJGpV.vvfBa8jHz.6fCPe0856wfDe', '7845-1201', 'usuario', 'activo', '2026-11-10 09:15:00', '2026-11-10 09:15:00'),
 (3, 'Carlos', 'Rivas', 'carlos.rivas@haloja.test', '$2y$10$RfMVTAH/LERhwkUEve7L0eUmZJGpV.vvfBa8jHz.6fCPe0856wfDe', '7120-4489', 'usuario', 'activo', '2026-11-11 14:30:00', '2026-11-11 14:30:00'),
 (4, 'Andrea', 'Castillo', 'andrea.castillo@haloja.test', '$2y$10$RfMVTAH/LERhwkUEve7L0eUmZJGpV.vvfBa8jHz.6fCPe0856wfDe', '7690-3310', 'usuario', 'activo', '2026-11-12 11:05:00', '2026-11-12 11:05:00'),
 (5, 'Mateo', 'Hernández', 'mateo.hernandez@haloja.test', '$2y$10$RfMVTAH/LERhwkUEve7L0eUmZJGpV.vvfBa8jHz.6fCPe0856wfDe', '7901-8824', 'usuario', 'activo', '2026-11-14 16:40:00', '2026-11-14 16:40:00');
 
 -- --------------------------------------------------------
--- 2. ALOJAMIENTOS (IDs 2 al 10)
+-- 2. ALOJAMIENTOS (IDs 1 al 10)
 -- Variedad de zonas, precios ($28 - $260), tipos y fechas de creación
 -- --------------------------------------------------------
-INSERT INTO `alojamientos` (
+INSERT IGNORE INTO `alojamientos` (
   `id_alojamiento`, `id_anfitrion`, `id_tipo`, `tipo_espacio`, `titulo`, `descripcion`,
   `pais`, `departamento`, `municipio`, `ciudad`, `direccion`, `referencias`,
   `latitud`, `longitud`, `capacidad`, `capacidad_personas`, `num_habitaciones`,
@@ -27,6 +28,16 @@ INSERT INTO `alojamientos` (
   `precio_persona_noche`, `precio_noche`, `tarifa_limpieza`, `estado`,
   `motivo_bloqueo`, `creado_en`, `actualizado_en`
 ) VALUES
+(
+  1, 1, 1, 'alojamiento_entero',
+  'Casa Familiar en Santa Elena',
+  'Casa amplia y tranquila en zona residencial segura de Antiguo Cuscatlán, ideal para familias o grupos.',
+  'El Salvador', 'La Libertad', 'Antiguo Cuscatlán', 'Santa Elena',
+  'Calle Conchagua #14, Urb. Santa Elena', 'A 5 minutos de la Embajada Americana',
+  13.6685000, -89.2572000, 5, 5, 3, 3, 2.0, '15:00:00', '11:00:00', 1,
+  0, 0, 0, 'Respetar normas del condominio.',
+  45.00, 45.00, 10.00, 'publicado', NULL, '2026-11-10 10:00:00', '2026-11-10 10:00:00'
+),
 (
   2, 2, 2, 'alojamiento_entero',
   'Loft Moderno en Zona Rosa',
@@ -121,7 +132,8 @@ INSERT INTO `alojamientos` (
 -- --------------------------------------------------------
 -- 3. IMÁGENES (Tabla alojamiento_imagenes)
 -- --------------------------------------------------------
-INSERT INTO `alojamiento_imagenes` (`alojamiento_id`, `ruta_o_url`, `es_portada`, `orden`, `creado_en`) VALUES
+INSERT IGNORE INTO `alojamiento_imagenes` (`alojamiento_id`, `ruta_o_url`, `es_portada`, `orden`, `creado_en`) VALUES
+(1, 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=900&q=80', 1, 1, '2026-11-10 10:00:00'),
 (2, 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80', 1, 1, '2026-11-22 05:30:00'),
 (2, 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80', 0, 2, '2026-11-22 05:30:00'),
 (3, 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80', 1, 1, '2026-11-21 18:10:00'),
@@ -144,7 +156,8 @@ INSERT INTO `alojamiento_imagenes` (`alojamiento_id`, `ruta_o_url`, `es_portada`
 -- --------------------------------------------------------
 -- 4. IMÁGENES (Tabla fotos_alojamiento - sincronizada)
 -- --------------------------------------------------------
-INSERT INTO `fotos_alojamiento` (`id_alojamiento`, `ruta_archivo`, `posicion`, `creado_en`) VALUES
+INSERT IGNORE INTO `fotos_alojamiento` (`id_alojamiento`, `ruta_archivo`, `posicion`, `creado_en`) VALUES
+(1, 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?auto=format&fit=crop&w=900&q=80', 1, '2026-11-10 10:00:00'),
 (2, 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=900&q=80', 1, '2026-11-22 05:30:00'),
 (2, 'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=900&q=80', 2, '2026-11-22 05:30:00'),
 (3, 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=900&q=80', 1, '2026-11-21 18:10:00'),
@@ -167,7 +180,7 @@ INSERT INTO `fotos_alojamiento` (`id_alojamiento`, `ruta_archivo`, `posicion`, `
 -- --------------------------------------------------------
 -- 5. AMENIDADES POR ALOJAMIENTO
 -- --------------------------------------------------------
-INSERT INTO `alojamiento_amenidades` (`alojamiento_id`, `amenidad_id`) VALUES
+INSERT IGNORE INTO `alojamiento_amenidades` (`alojamiento_id`, `amenidad_id`) VALUES
 (2, 1), (2, 2), (2, 4), (2, 5), (2, 6), (2, 9), (2, 12), (2, 14), (2, 23), (2, 24),
 (3, 1), (3, 2), (3, 4), (3, 5), (3, 7), (3, 9), (3, 10), (3, 14), (3, 19), (3, 25), (3, 26),
 (4, 1), (4, 2), (4, 4), (4, 5), (4, 6), (4, 9), (4, 11), (4, 14), (4, 15), (4, 17), (4, 23),
@@ -181,7 +194,7 @@ INSERT INTO `alojamiento_amenidades` (`alojamiento_id`, `amenidad_id`) VALUES
 -- --------------------------------------------------------
 -- 6. SERVICIOS POR ALOJAMIENTO
 -- --------------------------------------------------------
-INSERT INTO `alojamiento_servicio` (`id_alojamiento`, `id_servicio`) VALUES
+INSERT IGNORE INTO `alojamiento_servicio` (`id_alojamiento`, `id_servicio`) VALUES
 (1, 1), (1, 2), (1, 3), (1, 4), (1, 8),
 (2, 1), (2, 2), (2, 3), (2, 4), (2, 6), (2, 7),
 (3, 1), (3, 2), (3, 3), (3, 4), (3, 6), (3, 7), (3, 8),
@@ -196,7 +209,7 @@ INSERT INTO `alojamiento_servicio` (`id_alojamiento`, `id_servicio`) VALUES
 -- --------------------------------------------------------
 -- 7. MÉTODOS DE PAGO POR ALOJAMIENTO
 -- --------------------------------------------------------
-INSERT INTO `alojamiento_metodo_pago` (`id_alojamiento`, `id_metodo_pago`) VALUES
+INSERT IGNORE INTO `alojamiento_metodo_pago` (`id_alojamiento`, `id_metodo_pago`) VALUES
 (1, 1), (1, 2),
 (2, 2),
 (3, 1), (3, 2),
@@ -211,7 +224,7 @@ INSERT INTO `alojamiento_metodo_pago` (`id_alojamiento`, `id_metodo_pago`) VALUE
 -- --------------------------------------------------------
 -- 8. RESERVAS DE PRUEBA (Para probar vistas de Reservas)
 -- --------------------------------------------------------
-INSERT INTO `reservas` (
+INSERT IGNORE INTO `reservas` (
   `id_alojamiento`, `id_solicitante`, `fecha_entrada`, `fecha_salida`,
   `cantidad_huespedes`, `precio_persona_noche_aplicado`, `total`, `estado`,
   `creado_en`, `respondido_en`, `id_cancelado_por`, `cancelado_en`, `motivo_cancelacion`
