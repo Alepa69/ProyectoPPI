@@ -52,7 +52,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 <?php endif; ?>
 
-//filtrar
+
 <ul class="nav nav-pills mb-3">
     <?php foreach ($estadosValidos as $e): ?>
         <li class="nav-item">
