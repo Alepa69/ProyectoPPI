@@ -42,7 +42,7 @@
 
                 <li class="nav-item">
                     <a class="nav-link"
-                       href="modulos/reservas/mis_solicitudes.php">
+                       href="panel_cliente.php">
                         Mis reservas
                     </a>
                 </li>
@@ -78,7 +78,7 @@
                     <a class="btn btn-outline-light ms-2" href="cerrarsesion.php">Salir</a>
                 <?php else: ?>
                     <!-- Si NO ha iniciado sesión, mostramos Ingresar -->
-                    <a class="btn boton-ingresar" href="modulos/acceso/login.php">
+                    <a class="btn boton-ingresar" href="login.php">
                         <svg width="19" height="19"
                              viewBox="0 0 24 24"
                              fill="none"

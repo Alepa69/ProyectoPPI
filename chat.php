@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/includes/formularios.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 $idReserva = (int) ($_GET['id_reserva'] ?? 0);
@@ -28,12 +29,21 @@ if (!$reserva) {
 
 $esCliente=($idUsuario===(int)$reserva['id_solicitante']);
 $esAnfitrion=($idUsuario===(int)$reserva['id_anfitrion']);
+if (!$esCliente && !$esAnfitrion) {
+    http_response_code(404);
+    exit('La reserva no está disponible.');
+}
+$chatActivo = in_array($reserva['estado'], ['pendiente', 'aceptada'], true);
 
 //guarda el mensaje
 if ($_SERVER['REQUEST_METHOD']==='POST') {
-    $texto=trim($_POST['mensaje']??'');
+    if (!$chatActivo || !tokenFormularioValido()) {
+        http_response_code(403);
+        exit('Este mensaje no se puede enviar.');
+    }
+    $texto = is_string($_POST['mensaje'] ?? null) ? trim($_POST['mensaje']) : '';
 
-    if ($texto!=='') {
+    if ($texto !== '' && mb_strlen($texto) <= 2000) {
         $sqlInsert="INSERT INTO mensajes (id_reserva,id_emisor, mensaje)
 VALUES (?,?,?)";
         $stmtInsert=$conexion->prepare($sqlInsert);
@@ -58,7 +68,7 @@ $stmtMsg->execute();
 $mensajes=$stmtMsg->get_result()->fetch_all(MYSQLI_ASSOC);
 
 //para que te regresa al panel en el que estabas
-$urlVolver=$esCliente?'panel_cliente.php':'panel_anfitrion.php';
+$urlVolver = 'reserva.php?id=' . $idReserva;
 
 $pageTitle = 'Chat de reserva';
 include __DIR__ . '/includes/header.php';
@@ -71,7 +81,7 @@ include __DIR__ . '/includes/header.php';
         <!--reserva y num-->
         <small class="text-muted">Reserva #<?= (int) $reserva['id_reserva'] ?>(<?= htmlspecialchars($reserva['estado']) ?>)</small>
     </div>
-    <a href="<?= $urlVolver ?>" class="btn btn-outline-secondary btn-sm">Volver al panel</a>
+    <a href="<?= $urlVolver ?>" class="btn btn-outline-secondary btn-sm">Volver a la reserva</a>
 </div>
 
 <!--mensajes-->
@@ -100,13 +110,16 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <!--enciar mensaje-->
+<?php if ($chatActivo): ?>
 <form method="POST" action="chat.php?id_reserva=<?= $idReserva ?>" class="d-flex gap-2">
-    <input type="text" name="mensaje" class="form-control" placeholder="Escribe un mensaje..." required autocomplete="off">
+    <input type="hidden" name="csrf" value="<?= e(tokenFormulario()) ?>">
+    <input type="text" name="mensaje" class="form-control" aria-label="Mensaje" placeholder="Escribe un mensaje..." maxlength="2000" required autocomplete="off">
     <button type="submit" class="btn btn-success">Enviar</button>
 </form>
+<?php endif; ?>
 
 <script>
-    //scrolea hasta el ultimo mensaje
+    const caja = document.getElementById('caja-mensajes');
     if (caja) {
         caja.scrollTop = caja.scrollHeight;
     }

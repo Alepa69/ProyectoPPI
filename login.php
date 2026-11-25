@@ -5,6 +5,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/config/conexion.php';
 $error="";
+$alojamiento = (int) filter_input(INPUT_GET, 'alojamiento', FILTER_VALIDATE_INT);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
     $correo=trim($_POST['correo']?? '');
@@ -16,7 +17,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         $sql = "
         select id_usuario, nombre, apellido, correo, password_hash, rol
         from usuarios
-        where correo=?";
+        where correo=? and estado='activo'";
         $stmt=$conexion->prepare($sql);
         $stmt->bind_param("s",$correo);
         $stmt->execute();
@@ -25,7 +26,8 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         if ($fila=$resultado->fetch_assoc()) {
             //comparar contra con el hash de la bd
             if (password_verify($clave, $fila['password_hash'])) {
-                
+                session_regenerate_id(true);
+                $_SESSION = [];
                 //credenciales guardadas
                 $_SESSION['id_usuario']=$fila['id_usuario'];
                 $_SESSION['nombre']=$fila['nombre'];
@@ -33,13 +35,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 $_SESSION['correo']= $fila['correo'];
                 $_SESSION['rol']=$fila['rol'];
 
-                header("Location: index.php");
+                header('Location: ' . ($alojamiento > 0 ? 'listing.php?id=' . $alojamiento : 'index.php'), true, 303);
                 exit();
             } else {
-                $error="Contraseña incorrecta";
+                $error="El correo o la contraseña no son correctos.";
             }
         } else {
-            $error="Ese correo no esta registrado";
+            $error="El correo o la contraseña no son correctos.";
         }
         $stmt->close();
     } else {
@@ -61,7 +63,7 @@ require_once __DIR__ . '/includes/header.php';
                     <div class="alert alert-danger"><?= htmlspecialchars($error) ?></div>
                 <?php endif; ?>
 
-                <form action="login.php" method="POST">
+                <form action="login.php<?= $alojamiento > 0 ? '?alojamiento=' . $alojamiento : '' ?>" method="POST">
                     <div class="mb-3">
                         <label class="form-label">Correo:</label>
                         <input type="email" name="correo" class="form-control" required>

@@ -13,7 +13,7 @@ Material inicial para cuatro integrantes.
 - Total = noches × huéspedes × tarifa por persona/noche.
 - Hasta ocho fotos por alojamiento. Las posiciones únicas de 1 a 8 limitan la cantidad; la de menor posición será la portada.
 - Dirección, departamento, municipio y coordenadas obligatorias.
-- Hora de entrada común: 15:00, zona America/El_Salvador. Esta es la referencia del plazo de cancelación; no se admiten horas distintas por alojamiento en v1.
+- Hora de entrada: se usa la hora configurada en el alojamiento, con 15:00 como valor inicial, en la zona America/El_Salvador. Esa hora sirve de referencia para el plazo de cancelación.
 - Salida exclusiva para el cálculo de noches: una salida el día 15 permite otra entrada ese mismo día.
 - Pendientes no bloquean; aceptadas bloquean sus noches.
 - Ambas partes pueden cancelar una reserva aceptada antes de la entrada. El solicitante debe hacerlo al menos 24 horas antes, inclusive; el anfitrión puede hacerlo hasta antes de la entrada.
@@ -198,6 +198,19 @@ Esta entrega apunta a MariaDB 10.4+. Si el hosting ofrece MySQL u otra versión,
 - Probar búsquedas con 100 alojamientos y cuatro usuarios simultáneos en el hosting: objetivo de dos segundos para el listado, excluyendo carga completa de imágenes y mapa externo.
 
 Validación de esta entrega: revisión de estructura, claves, restricciones y empaquetado. No ejecutada en un servidor MariaDB en este entorno; tampoco probada en su hosting. Los casos anteriores son la validación que deben realizar al importar y al implementar PHP, no resultados ya obtenidos.
+
+## Notas de los cambios en reservas y perfil
+
+- **Mi perfil.** El teléfono se puede consultar, editar o dejar vacío. Se añadieron una foto y una presentación opcionales. El correo y el teléfono se muestran en la cuenta privada. Desde el anuncio se puede abrir la presentación del anfitrión.
+- **Modo anfitrión.** «Convertirme en anfitrión» abre el panel con la misma cuenta. «Regresar» en el formulario, cuando se abrió desde el panel, vuelve al panel. Después de publicar desde ahí, el anfitrión llega a «Mis alojamientos».
+- **Mis alojamientos.** «Eliminar del catálogo» pide confirmación y cambia el anuncio a inactivo. Se conservan sus reservas y se puede volver a publicar. «Editar» protege la capacidad de las estancias confirmadas que todavía siguen vigentes.
+- **Huésped y anfitrión.** Cada parte puede abrir la misma reserva desde su panel y ver sus acciones disponibles. El huésped puede retirar una solicitud pendiente o cancelar una confirmada hasta 24 horas antes de la entrada. El anfitrión puede aceptar, rechazar o cancelar conforme al estado y la hora. Los mensajes se limitan a las dos personas de la reserva.
+- **Precio y disponibilidad.** La ficha muestra el total por noches, huéspedes y tarifa por persona. El servidor guarda ese importe y vuelve a revisar capacidad y fechas. El calendario del anfitrión muestra las noches confirmadas y permite bloquear o liberar noches manualmente. Para los horarios se usa la hora de entrada configurada en cada anuncio, con las 15:00 como valor inicial y hora de El Salvador como referencia.
+- **Portadas y perfil.** «Mis reservas», «Reservas recibidas» y el detalle usan la portada del catálogo, también para las fotos guardadas con la estructura anterior. El perfil del huésped se puede abrir desde las tarjetas y el detalle de anfitrión. Muestra foto, nombre, presentación y año de alta al propietario del alojamiento.
+- **Foto del menú.** El menú usa la foto guardada en el perfil. Muestra la inicial si la cuenta todavía no tiene foto.
+- **Avisos de reservas.** Los anfitriones reciben avisos de solicitudes nuevas, retiros y cancelaciones. Los huéspedes reciben avisos al confirmarse, rechazarse o cancelarse su reserva. La ventana aparece en la esquina inferior derecha al entrar y consulta novedades cada 10 segundos con la pestaña activa. Se cierra al pulsarla o después de cinco segundos. El punto rojo en los accesos de reservas sigue visible hasta abrir la reserva o pulsar su aviso.
+
+Para integrar estos cambios en otra instalación, importa `bd/004_perfil_y_disponibilidad.sql` y luego `bd/005_avisos_reservas.sql` en la base del proyecto después del esquema y los catálogos. La segunda migración recupera solicitudes pendientes y respuestas recientes, junto con las estancias confirmadas vigentes. En una instalación que todavía usa la estructura antigua de alojamientos, aplica primero `bd/003_migracion_airbnb.sql`. Si la tabla de mensajes aún no existe, importa también `bd/chat.sql`. El servidor debe poder escribir en `uploads/perfiles/` al guardar fotos.
 
 ## Referencias técnicas oficiales
 

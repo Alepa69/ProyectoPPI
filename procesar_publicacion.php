@@ -1,10 +1,6 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
-require_once __DIR__ . '/config/conexion.php';
-
+require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/includes/formularios.php';
 
 function esPeticionJson(): bool
 {
@@ -32,23 +28,6 @@ function normalizarHora(string $valor): ?string
         return null;
     }
     return sprintf('%s:%s:%s', $m[1], $m[2], $m[3] ?? '00');
-}
-
-/**
- * Resuelve el ID del anfitrion desde sesion o usuario activo de respaldo.
- */
-function resolverAnfitrionId(mysqli $conexion): ?int
-{
-    if (!empty($_SESSION['id_usuario'])) {
-        return (int)$_SESSION['id_usuario'];
-    }
-
-    $res = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' ORDER BY id_usuario ASC LIMIT 1");
-    if ($res && $fila = $res->fetch_assoc()) {
-        return (int)$fila['id_usuario'];
-    }
-
-    return null;
 }
 
 /**
@@ -149,15 +128,10 @@ function procesarImagenesPublicacion(array &$errores, array &$archivosSubidos): 
 /**
  * Ejecuta la validacion e insercion transaccional del alojamiento, imagenes y amenidades.
   */
-function ejecutarPublicacionAlojamiento(mysqli $conexion, ?int $idAnfitrion = null): array
+function ejecutarPublicacionAlojamiento(mysqli $conexion, int $idAnfitrion): array
 {
     $errores = [];
     $archivosSubidos = [];
-
-    $idAnfitrion = $idAnfitrion ?? resolverAnfitrionId($conexion);
-    if (!$idAnfitrion || $idAnfitrion <= 0) {
-        return ['ok' => false, 'errores' => ['No se encontro un anfitrion valido en sesion.']];
-    }
 
     // Campos principales
     $idTipo = isset($_POST['id_tipo']) ? (int)$_POST['id_tipo'] : 0;
@@ -439,7 +413,11 @@ function ejecutarPublicacionAlojamiento(mysqli $conexion, ?int $idAnfitrion = nu
 $esEntradaDirecta = basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'procesar_publicacion.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $resultado = ejecutarPublicacionAlojamiento($conexion, $id_anfitrion ?? null);
+    $desdePanel = ($_POST['desde'] ?? '') === 'anfitrion' || ($_SESSION['modo'] ?? '') === 'anfitrion';
+    $destino = $desdePanel ? 'mis_alojamientos.php' : 'index.php?publicado=1';
+    $resultado = tokenFormularioValido()
+        ? ejecutarPublicacionAlojamiento($conexion, (int) $_SESSION['id_usuario'])
+        : ['ok' => false, 'errores' => ['Recarga la página y vuelve a publicar.']];
 
     if (esPeticionJson()) {
         if ($resultado['ok']) {
@@ -447,7 +425,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'ok' => true,
                 'id_alojamiento' => $resultado['id_alojamiento'],
                 'mensaje' => $resultado['mensaje'],
-                'redirect' => 'index.php'
+                'redirect' => $destino
             ]);
         }
         responderJson(422, [
@@ -458,14 +436,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($resultado['ok']) {
-        header('Location: index.php?publicado=1');
+        header('Location: ' . $destino, true, 303);
         exit;
     }
 
     $mensajeError = implode(' ', $resultado['errores']);
     if ($esEntradaDirecta) {
         $_SESSION['error_publicacion'] = $mensajeError;
-        header('Location: publicar_casa.php');
+        header('Location: publicar_casa.php' . ($desdePanel ? '?desde=anfitrion' : ''), true, 303);
         exit;
     }
 } elseif ($esEntradaDirecta) {

@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/config/sesion.php';
-require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/includes/reservas.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 
@@ -41,33 +41,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $latitud = ($_POST['latitud'] ?? '') !== '' ? (float) $_POST['latitud'] : 13.6929403;
     $longitud = ($_POST['longitud'] ?? '') !== '' ? (float) $_POST['longitud'] : -89.2181911;
 
-    if (empty($titulo) || empty($descripcion) || empty($departamento) || empty($municipio) || empty($direccion)) {
+    if (!tokenFormularioValido()) {
+        $mensajeError = "Recarga la página antes de guardar los cambios.";
+    } elseif (empty($titulo) || empty($descripcion) || empty($departamento) || empty($municipio) || empty($direccion)) {
         $mensajeError = "Por favor completa todos los campos de texto obligatorios.";
     } elseif ($id_tipo <= 0) {
         $mensajeError = "Por favor selecciona un tipo de alojamiento.";
     } elseif ($capacidad <= 0 || $precio <= 0) {
         $mensajeError = "La capacidad y el precio deben ser mayores a 0.";
     } else {
-        // Actualizar datos
-        $sql = "UPDATE alojamientos SET 
-                    id_tipo = ?, titulo = ?, descripcion = ?, departamento = ?, 
-                    municipio = ?, direccion = ?, latitud = ?, longitud = ?, 
-                    capacidad = ?, precio_persona_noche = ? 
-                WHERE id_alojamiento = ? AND id_anfitrion = ?";
-        
-        $stmtUpdate = $conexion->prepare($sql);
-        $stmtUpdate->bind_param(
-            "isssssddidii",
-            $id_tipo, $titulo, $descripcion, $departamento,
-            $municipio, $direccion, $latitud, $longitud,
-            $capacidad, $precio, $id, $idUsuario
-        );
+        $conexion->begin_transaction();
+        try {
+            $actual = bloquearAlojamiento($conexion, $id);
+            if ((int) $actual['id_anfitrion'] !== $idUsuario) {
+                throw new DomainException('Este alojamiento no pertenece a tu cuenta.');
+            }
+            $horaActual = relojReservas()->format('Y-m-d H:i:s');
+            $reservaMayor = $conexion->prepare("
+                SELECT 1 FROM reservas WHERE id_alojamiento = ? AND estado = 'aceptada'
+                    AND cantidad_huespedes > ? AND TIMESTAMP(fecha_salida, ?) > ?
+                LIMIT 1 FOR UPDATE
+            ");
+            $reservaMayor->bind_param('iiss', $id, $capacidad, $actual['hora_checkout'], $horaActual);
+            $reservaMayor->execute();
+            if ($reservaMayor->get_result()->fetch_row()) {
+                throw new DomainException('La capacidad no puede ser menor a la de una reserva confirmada que sigue vigente.');
+            }
 
-        if ($stmtUpdate->execute()) {
-            // Redirigir a mis alojamientos con mensaje de éxito (puedes usar sesión flash si quieres)
-            header('Location: mis_alojamientos.php');
+            $stmtUpdate = $conexion->prepare("
+                UPDATE alojamientos SET id_tipo = ?, titulo = ?, descripcion = ?, departamento = ?,
+                    municipio = ?, direccion = ?, latitud = ?, longitud = ?,
+                    capacidad = ?, capacidad_personas = ?, precio_persona_noche = ?, precio_noche = ?
+                WHERE id_alojamiento = ? AND id_anfitrion = ?
+            ");
+            $stmtUpdate->bind_param(
+                'isssssddiiddii',
+                $id_tipo, $titulo, $descripcion, $departamento, $municipio, $direccion, $latitud, $longitud,
+                $capacidad, $capacidad, $precio, $precio, $id, $idUsuario
+            );
+            $stmtUpdate->execute();
+            $conexion->commit();
+            $_SESSION['alojamiento_flash'] = ['tipo' => 'success', 'texto' => 'Cambios guardados en el alojamiento.'];
+            header('Location: mis_alojamientos.php', true, 303);
             exit;
-        } else {
+        } catch (DomainException $error) {
+            $conexion->rollback();
+            $mensajeError = $error->getMessage();
+        } catch (Throwable $error) {
+            $conexion->rollback();
+            error_log('Editar alojamiento: ' . $error->getMessage());
             $mensajeError = "Error al guardar los cambios en la base de datos.";
         }
     }
@@ -99,6 +121,7 @@ $pageTitle = 'Editar: ' . $casa['titulo'];
                 <?php endif; ?>
 
                 <form method="POST" action="editar_casa.php?id=<?= $id ?>">
+                    <input type="hidden" name="csrf" value="<?= e(tokenFormulario()) ?>">
                     <div class="row g-3">
                         <div class="col-12">
                             <label for="titulo" class="form-label fw-semibold">Título del alojamiento *</label>
@@ -156,7 +179,7 @@ $pageTitle = 'Editar: ' . $casa['titulo'];
                         </div>
 
                         <div class="col-md-6">
-                            <label for="precio" class="form-label fw-semibold">Precio por noche ($ USD) *</label>
+                            <label for="precio" class="form-label fw-semibold">Precio por persona y noche (USD) *</label>
                             <input type="number" step="0.01" min="0.01" class="form-control" id="precio" name="precio" value="<?= htmlspecialchars($casa['precio_persona_noche']) ?>" required>
                         </div>
 

@@ -1,73 +1,72 @@
 <?php
-require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/includes/formularios.php';
 
-// Forzar modo anfitrión
 $_SESSION['modo'] = 'anfitrion';
-
-$idAnfitrion = (int) $_SESSION['id_usuario'];
-
+$id = (int) $_SESSION['id_usuario'];
 $stmt = $conexion->prepare("
     SELECT a.id_alojamiento, a.titulo, a.municipio, a.departamento, a.precio_persona_noche, a.estado,
-           COALESCE(f.ruta_archivo, 'https://picsum.photos/seed/casa/400/220') AS foto_principal
-    FROM alojamientos a
-    LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
-    WHERE a.id_anfitrion = ?
-    ORDER BY a.creado_en DESC
+        COALESCE(
+            (SELECT i.ruta_o_url FROM alojamiento_imagenes i WHERE i.alojamiento_id = a.id_alojamiento
+             ORDER BY i.es_portada DESC, i.orden, i.id LIMIT 1),
+            (SELECT f.ruta_archivo FROM fotos_alojamiento f WHERE f.id_alojamiento = a.id_alojamiento
+             ORDER BY f.posicion LIMIT 1)
+        ) AS portada
+    FROM alojamientos a WHERE a.id_anfitrion = ? ORDER BY a.creado_en DESC
 ");
-$stmt->bind_param('i', $idAnfitrion);
+$stmt->bind_param('i', $id);
 $stmt->execute();
 $alojamientos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$flash = $_SESSION['alojamiento_flash'] ?? null;
+unset($_SESSION['alojamiento_flash']);
 
-$pageTitle = 'Mis Alojamientos';
-include __DIR__ . '/includes/header.php';
+$pageTitle = 'Mis alojamientos';
+require __DIR__ . '/includes/header.php';
 ?>
-
-<!-- Botón Volver -->
-<div class="mb-3">
-    <a href="index.php" class="btn btn-outline-secondary rounded-pill btn-sm">
-        &larr; Volver al panel
-    </a>
+<a href="panel_anfitrion.php" class="btn btn-outline-secondary btn-sm mb-3">Volver al panel</a>
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+    <h1 class="h2 mb-0">Mis alojamientos</h1>
+    <a href="publicar_casa.php?desde=anfitrion" class="btn btn-dark">Publicar nuevo alojamiento</a>
 </div>
-
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="mb-0">Mis Alojamientos</h2>
-    <a href="publicar_casa.php" class="btn btn-dark rounded-pill px-4">+ Publicar nuevo alojamiento</a>
-</div>
-
-<?php if (empty($alojamientos)): ?>
-    <div class="text-center py-5">
-        <span style="font-size: 5rem;">🏡</span>
-        <h3 class="mt-3 fw-bold">No tienes ningún anuncio</h3>
-        <p class="text-muted">Comienza a generar ingresos publicando tu primera propiedad en HALOJA.</p>
-        <a href="publicar_casa.php" class="btn btn-dark rounded-pill mt-3 px-4">Completar mi anuncio</a>
-    </div>
+<?php if ($flash): ?><p class="alert alert-<?= e($flash['tipo']) ?>" role="status"><?= e($flash['texto']) ?></p><?php endif; ?>
+<?php if (!$alojamientos): ?>
+    <p class="card rounded-4 p-4">Aquí podrás ver y administrar los alojamientos que publiques.</p>
 <?php else: ?>
     <div class="row g-4">
         <?php foreach ($alojamientos as $casa): ?>
+            <?php $publicado = $casa['estado'] === 'publicado'; ?>
             <div class="col-md-6 col-lg-4">
-                <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden">
-                    <img src="<?= htmlspecialchars($casa['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 200px;" alt="Foto de <?= htmlspecialchars($casa['titulo']) ?>">
+                <article class="card h-100 rounded-4 overflow-hidden shadow-sm">
+                    <?php if ($casa['portada']): ?>
+                        <img src="<?= e($casa['portada']) ?>" class="card-img-top object-fit-cover" style="height: 200px" alt="" loading="lazy">
+                    <?php endif; ?>
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h5 class="card-title fw-bold mb-0"><?= htmlspecialchars($casa['titulo']) ?></h5>
-                            <span class="badge bg-<?= $casa['estado'] === 'publicado' ? 'success' : 'secondary' ?>">
-                                <?= ucfirst($casa['estado']) ?>
-                            </span>
-                        </div>
-                        <p class="text-muted small mb-3"><?= htmlspecialchars($casa['municipio']) ?>, <?= htmlspecialchars($casa['departamento']) ?></p>
-                        <h6 class="fw-bold text-primary">$<?= number_format((float)$casa['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">/ noche</small></h6>
+                        <span class="badge bg-<?= $publicado ? 'success' : 'secondary' ?> mb-2"><?= e(ucfirst($casa['estado'])) ?></span>
+                        <h2 class="h5"><?= e($casa['titulo']) ?></h2>
+                        <p class="text-muted small mb-1"><?= e($casa['municipio'] . ', ' . $casa['departamento']) ?></p>
+                        <p class="mb-0"><strong>$<?= number_format((float) $casa['precio_persona_noche'], 2) ?></strong> por persona y noche</p>
                     </div>
-                    <div class="card-footer bg-white border-top-0 pt-0 pb-3 d-flex gap-2">
-                        <!-- Botón Ver publicación -->
-                        <a href="listing.php?id=<?= (int)$casa['id_alojamiento'] ?>" class="btn btn-outline-dark w-50 rounded-pill btn-sm">Ver</a>
-                        <!-- Botón Editar -->
-                        <a href="editar_casa.php?id=<?= (int)$casa['id_alojamiento'] ?>" class="btn btn-outline-primary w-50 rounded-pill btn-sm">Editar</a>
+                    <div class="card-footer bg-white d-flex flex-wrap gap-2">
+                        <?php if ($publicado): ?>
+                            <a href="listing.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-dark btn-sm">Ver</a>
+                        <?php endif; ?>
+                        <a href="editar_casa.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-dark btn-sm">Editar</a>
+                        <a href="calendario_anfitrion.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-dark btn-sm">Calendario</a>
+                        <?php if ($publicado || $casa['estado'] === 'inactivo'): ?>
+                            <form method="post" action="estado_alojamiento.php" <?php if ($publicado): ?>onsubmit="return confirm('¿Quitar este alojamiento del catálogo? Se conservará el historial de reservas.');"<?php endif; ?>>
+                                <input type="hidden" name="csrf" value="<?= e(tokenFormulario()) ?>">
+                                <input type="hidden" name="id_alojamiento" value="<?= (int) $casa['id_alojamiento'] ?>">
+                                <?php if ($publicado): ?>
+                                    <button class="btn btn-outline-danger btn-sm" name="accion" value="retirar">Eliminar del catálogo</button>
+                                <?php else: ?>
+                                    <button class="btn btn-outline-dark btn-sm" name="accion" value="reactivar">Volver a publicar</button>
+                                <?php endif; ?>
+                            </form>
+                        <?php endif; ?>
                     </div>
-                </div>
+                </article>
             </div>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
-
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php require __DIR__ . '/includes/footer.php'; ?>

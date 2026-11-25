@@ -1,6 +1,7 @@
 <?php
 session_start();
 require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/includes/reservas.php';
 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
@@ -16,21 +17,6 @@ function escapar($texto): string
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-function leerFecha($valor): ?DateTimeImmutable
-{
-    if (!is_string($valor)) {
-        return null;
-    }
-
-    $fecha = DateTimeImmutable::createFromFormat(
-        '!Y-m-d',
-        $valor,
-        new DateTimeZone('America/El_Salvador')
-    );
-
-    return $fecha && $fecha->format('Y-m-d') === $valor ? $fecha : null;
-}
-
 // Información general del alojamiento y del anfitrión.
 $consulta = $conexion->prepare("
     SELECT
@@ -43,10 +29,10 @@ $consulta = $conexion->prepare("
         a.reglas_adicionales, a.precio_persona_noche, a.precio_noche,
         a.tarifa_limpieza, a.id_anfitrion,
         u.nombre AS nombre_anfitrion, u.apellido AS apellido_anfitrion,
-        u.creado_en AS anfitrion_desde,
+        u.creado_en AS anfitrion_desde, u.foto_perfil AS foto_anfitrion,
         t.nombre AS tipo_alojamiento
     FROM alojamientos AS a
-    INNER JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion
+    INNER JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion AND u.estado = 'activo'
     LEFT JOIN tipos_alojamiento AS t ON t.id_tipo = a.id_tipo
     WHERE a.id_alojamiento = ? AND a.estado = 'publicado'
     LIMIT 1
@@ -119,10 +105,11 @@ $consultaAmenidades->close();
 // Datos derivados para la presentación.
 $idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
 $esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
-$hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
+$hoy = relojReservas()->setTime(0, 0);
 $error = '';
-$confirmacion = $_SESSION['confirmacion_reserva'][$id] ?? '';
-unset($_SESSION['confirmacion_reserva'][$id]);
+$entrada = null;
+$salida = null;
+$huespedes = 1;
 
 $nombreAnfitrion = trim($casa['nombre_anfitrion'] . ' ' . $casa['apellido_anfitrion']);
 $iniciales = mb_strtoupper(
@@ -159,20 +146,14 @@ $tarifaLimpieza = (float) $casa['tarifa_limpieza'];
 $totalFotos = count($fotos);
 $fotosVisibles = min($totalFotos, 5);
 
-if (empty($_SESSION['csrf_reserva'])) {
-    $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
-}
-
-// Se conserva el proceso original de solicitud de reserva.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $entrada = leerFecha($_POST['entrada'] ?? null);
-    $salida = leerFecha($_POST['salida'] ?? null);
-    $huespedes = filter_input(INPUT_POST, 'huespedes', FILTER_VALIDATE_INT);
-    $token = $_POST['csrf'] ?? '';
+    $entrada = fechaReserva($_POST['entrada'] ?? null);
+    $salida = fechaReserva($_POST['salida'] ?? null);
+    $huespedes = (int) filter_input(INPUT_POST, 'huespedes', FILTER_VALIDATE_INT);
 
     if (!$idUsuario || $esAnfitrion) {
         $error = 'Inicia sesión con una cuenta distinta a la del anfitrión.';
-    } elseif (!is_string($token) || !hash_equals($_SESSION['csrf_reserva'], $token)) {
+    } elseif (!tokenFormularioValido()) {
         $error = 'Recarga la página y vuelve a intentarlo.';
     } elseif (!$entrada || !$salida || $entrada < $hoy || $salida <= $entrada) {
         $error = 'Elige una entrada desde hoy y una salida posterior.';
@@ -182,57 +163,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $fechaEntrada = $entrada->format('Y-m-d');
         $fechaSalida = $salida->format('Y-m-d');
 
-        // La base toma la tarifa del alojamiento y calcula el total.
-        $guardar = $conexion->prepare("
-            INSERT INTO reservas (
-                id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
-                cantidad_huespedes, precio_persona_noche_aplicado, total, estado
-            )
-            SELECT a.id_alojamiento, u.id_usuario, datos.entrada, datos.salida,
-                   datos.huespedes, a.precio_persona_noche,
-                   DATEDIFF(datos.salida, datos.entrada)
-                       * datos.huespedes * a.precio_persona_noche,
-                   'pendiente'
-            FROM alojamientos AS a
-            JOIN usuarios AS u ON u.id_usuario = ? AND u.estado = 'activo'
-            CROSS JOIN (SELECT ? AS entrada, ? AS salida, ? AS huespedes) AS datos
-            WHERE a.id_alojamiento = ?
-              AND a.estado = 'publicado'
-              AND a.id_anfitrion <> u.id_usuario
-              AND a.capacidad >= datos.huespedes
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM reservas AS r
-                  WHERE r.id_alojamiento = a.id_alojamiento
-                    AND r.estado = 'aceptada'
-                    AND r.fecha_entrada < datos.salida
-                    AND r.fecha_salida > datos.entrada
-              )
-        ");
-        $guardar->bind_param('issii', $idUsuario, $fechaEntrada, $fechaSalida, $huespedes, $id);
-        $guardar->execute();
+        $conexion->begin_transaction();
+        try {
+            $actual = bloquearAlojamiento($conexion, $id);
+            if ($actual['estado'] !== 'publicado' || $actual['estado_anfitrion'] !== 'activo'
+                || (int) $actual['id_anfitrion'] === $idUsuario || $huespedes > (int) $actual['capacidad']) {
+                throw new DomainException('Revisa la disponibilidad y capacidad del alojamiento.');
+            }
+            if (relojReservas() >= momentoEntrada(['fecha_entrada' => $fechaEntrada, 'hora_checkin' => $actual['hora_checkin']])) {
+                throw new DomainException('Ya pasó la hora de entrada para esa fecha.');
+            }
+            $noches = $entrada->diff($salida)->days;
+            if ($noches < (int) $actual['estancia_minima']) {
+                throw new DomainException('La estancia mínima es de ' . (int) $actual['estancia_minima'] . ' noches.');
+            }
+            if (hayReservaConfirmada($conexion, $id, $fechaEntrada, $fechaSalida)
+                || hayBloqueoDeFechas($conexion, $id, $fechaEntrada, $fechaSalida)) {
+                throw new DomainException('Algunas noches ya no están disponibles. Elige otras fechas.');
+            }
 
-        if ($guardar->affected_rows === 1) {
-            $_SESSION['confirmacion_reserva'][$id] =
-                'Solicitud enviada. Quedó pendiente de respuesta del anfitrión.';
-            header('Location: listing.php?id=' . $id, true, 303);
+            // Guarda la tarifa vigente y calcula el total con aritmética decimal en MariaDB.
+            $guardar = $conexion->prepare("
+                INSERT INTO reservas (id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
+                    cantidad_huespedes, precio_persona_noche_aplicado, total, estado, creado_en)
+                SELECT a.id_alojamiento, u.id_usuario, ?, ?, ?, a.precio_persona_noche,
+                       a.precio_persona_noche * ? * ?, 'pendiente', UTC_TIMESTAMP()
+                FROM alojamientos a JOIN usuarios u ON u.id_usuario = ? AND u.estado = 'activo'
+                WHERE a.id_alojamiento = ?
+            ");
+            $guardar->bind_param('ssiiiii', $fechaEntrada, $fechaSalida, $huespedes, $noches, $huespedes, $idUsuario, $id);
+            $guardar->execute();
+            if ($guardar->affected_rows !== 1) {
+                throw new DomainException('La cuenta ya no puede enviar solicitudes.');
+            }
+            $idReserva = $conexion->insert_id;
+            registrarAvisoReserva($conexion, $idReserva, (int) $actual['id_anfitrion'], 'solicitada');
+            $conexion->commit();
+            $_SESSION['flash'] = ['tipo' => 'success', 'texto' => 'Solicitud enviada. Quedó pendiente de respuesta del anfitrión.'];
+            header('Location: reserva.php?id=' . $idReserva, true, 303);
             exit;
+        } catch (DomainException $problema) {
+            $conexion->rollback();
+            $error = $problema->getMessage();
+        } catch (Throwable $problema) {
+            $conexion->rollback();
+            error_log('Solicitud de reserva: ' . $problema->getMessage());
+            $error = 'No se pudo solicitar la reserva. Inténtalo de nuevo.';
         }
-
-        $error = 'No se pudo solicitar la reserva. Revisa tu cuenta y prueba otras fechas.';
     }
 }
+$hoyTexto = $hoy->format('Y-m-d');
+$stmt = $conexion->prepare("
+    SELECT fecha_entrada AS inicio, fecha_salida AS fin
+    FROM reservas WHERE id_alojamiento = ? AND estado = 'aceptada' AND fecha_salida > ?
+    UNION ALL
+    SELECT fecha_inicio, fecha_fin FROM bloqueos_alojamiento WHERE id_alojamiento = ? AND fecha_fin > ?
+    ORDER BY inicio
+");
+$stmt->bind_param('isis', $id, $hoyTexto, $id, $hoyTexto);
+$stmt->execute();
+$ocupadas = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>
 <!doctype html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= escapar($casa['titulo']) ?> | Davinci</title>
+    <title><?= escapar($casa['titulo']) ?> | HALOJA</title>
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/inicio.css">
-    <link rel="stylesheet" href="assets/css/tema-davinci.css">
+    <link rel="stylesheet" href="assets/css/tema-haloja.css">
     <link rel="stylesheet" href="assets/css/listing.css">
+    <link rel="stylesheet" href="assets/css/reservas.css">
 </head>
 <body>
 <main class="listing-page">
@@ -245,6 +247,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
             <?php endif; ?>
         </div>
+
+        <?php require __DIR__ . '/includes/aviso_reservas.php'; ?>
 
         <header class="listing-heading">
             <div>
@@ -311,9 +315,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <section class="listing-section listing-host-section">
                     <div class="listing-section-heading"><div><p class="listing-eyebrow">TU ANFITRIÓN</p><h2>Conoce a <?= escapar($casa['nombre_anfitrion']) ?></h2></div></div>
                     <div class="listing-host-card">
-                        <div class="listing-host-avatar" aria-hidden="true"><?= escapar($iniciales) ?></div>
+                        <?php if ($casa['foto_anfitrion']): ?>
+                            <img class="listing-host-avatar object-fit-cover" src="<?= escapar($casa['foto_anfitrion']) ?>" width="64" height="64" alt="">
+                        <?php else: ?>
+                            <div class="listing-host-avatar" aria-hidden="true"><?= escapar($iniciales) ?></div>
+                        <?php endif; ?>
                         <div class="listing-host-info">
-                            <strong><?= escapar($nombreAnfitrion) ?></strong>
+                            <strong><a href="perfil_anfitrion.php?id=<?= (int) $casa['id_anfitrion'] ?>"><?= escapar($nombreAnfitrion) ?></a></strong>
                             <span>Anfitrión en Davinci</span>
                             <small>Cuenta creada el <?= escapar($fechaAnfitrion) ?></small>
                         </div>
@@ -367,38 +375,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                     <?php if ($tarifaLimpieza > 0): ?>
                         <div class="listing-cleaning-fee"><span>Tarifa de limpieza indicada</span><strong>$<?= number_format($tarifaLimpieza, 2) ?></strong></div>
-                        <p class="listing-cleaning-note">Este cargo se muestra como información; el cálculo automático de la solicitud todavía no lo suma.</p>
+                        <p class="listing-cleaning-note">La limpieza se informa por separado del importe de la reserva.</p>
                     <?php endif; ?>
                     <div class="listing-booking-divider"></div>
                     <h2>Solicitar reserva</h2>
                     <p class="listing-booking-intro">Elige tus fechas y la cantidad de huéspedes para enviar una solicitud al anfitrión.</p>
 
-                    <?php if ($confirmacion): ?>
-                        <p class="alert alert-success" role="status"><?= escapar($confirmacion) ?></p>
-                    <?php endif; ?>
                     <?php if ($error): ?>
                         <p class="alert alert-danger" role="alert"><?= escapar($error) ?></p>
                     <?php endif; ?>
 
                     <?php if (!$idUsuario): ?>
                         <p class="listing-login-note">Inicia sesión para solicitar una reserva.</p>
-                        <a href="login.php" class="btn btn-success w-100 mt-2">Iniciar sesión</a>
+                        <a href="login.php?alojamiento=<?= $id ?>" class="btn btn-success w-100 mt-2">Iniciar sesión</a>
                     <?php elseif ($esAnfitrion): ?>
                         <p class="listing-login-note">Este alojamiento pertenece a tu cuenta.</p>
                         <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success w-100 mt-2">Editar mi publicación</a>
                     <?php else: ?>
                         <form method="post" action="listing.php?id=<?= (int) $id ?>" class="listing-booking-form">
-                            <input type="hidden" name="csrf" value="<?= escapar($_SESSION['csrf_reserva']) ?>">
+                            <input type="hidden" name="csrf" value="<?= escapar(tokenFormulario()) ?>">
                             <label for="entrada" class="form-label">Fecha de entrada</label>
-                            <input type="date" name="entrada" id="entrada" class="form-control" min="<?= $hoy->format('Y-m-d') ?>" required>
+                            <input type="date" name="entrada" id="entrada" class="form-control" min="<?= $hoyTexto ?>" value="<?= $entrada?->format('Y-m-d') ?>" required>
                             <label for="salida" class="form-label">Fecha de salida</label>
-                            <input type="date" name="salida" id="salida" class="form-control" min="<?= $hoy->modify('+1 day')->format('Y-m-d') ?>" required>
+                            <input type="date" name="salida" id="salida" class="form-control" min="<?= $hoy->modify('+1 day')->format('Y-m-d') ?>" value="<?= $salida?->format('Y-m-d') ?>" required>
                             <label for="huespedes" class="form-label">Número de huéspedes</label>
-                            <input type="number" name="huespedes" id="huespedes" class="form-control" min="1" max="<?= (int) $casa['capacidad'] ?>" value="1" required>
+                            <input type="number" name="huespedes" id="huespedes" class="form-control" min="1" max="<?= (int) $casa['capacidad'] ?>" value="<?= $huespedes ?: 1 ?>" required>
                             <p class="listing-capacity-note">Este alojamiento admite hasta <?= (int) $casa['capacidad'] ?> huésped(es).</p>
+                            <p id="totalEstancia" class="fw-semibold mb-2" aria-live="polite">Selecciona fechas para ver el total.</p>
                             <button type="submit" class="btn btn-success w-100">Enviar solicitud</button>
                             <p class="listing-booking-footnote">La solicitud quedará pendiente hasta que el anfitrión responda.</p>
                         </form>
+                    <?php endif; ?>
+                    <?php if ($ocupadas): ?>
+                        <details class="small mt-3">
+                            <summary>Noches no disponibles</summary>
+                            <ul class="mb-0 mt-2">
+                                <?php foreach ($ocupadas as $periodo): ?>
+                                    <li><?= escapar(max($hoyTexto, $periodo['inicio'])) ?> a <?= escapar(fechaReserva($periodo['fin'])->modify('-1 day')->format('Y-m-d')) ?> inclusive</li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </details>
                     <?php endif; ?>
                 </div>
             </aside>
@@ -454,25 +470,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         });
     }
 
-    // La fecha de salida debe ser posterior a la fecha de entrada.
     const inputEntrada = document.getElementById('entrada');
     const inputSalida = document.getElementById('salida');
+    const inputHuespedes = document.getElementById('huespedes');
+    const resumen = document.getElementById('totalEstancia');
 
-    if (inputEntrada && inputSalida) {
-        inputEntrada.addEventListener('change', function () {
-            if (this.value) {
-                const fechaMinSalida = new Date(this.value + 'T00:00:00');
-                fechaMinSalida.setDate(fechaMinSalida.getDate() + 1);
-                const minStr = fechaMinSalida.getFullYear() + '-'
-                    + String(fechaMinSalida.getMonth() + 1).padStart(2, '0') + '-'
-                    + String(fechaMinSalida.getDate()).padStart(2, '0');
-                inputSalida.min = minStr;
+    if (resumen) {
+        const ocupadas = <?= json_encode($ocupadas) ?>;
+        const minimo = <?= (int) $casa['estancia_minima'] ?>;
+        const tarifa = <?= json_encode($precioPorNoche) ?>;
+        const moneda = new Intl.NumberFormat('es-SV', { style: 'currency', currency: 'USD' });
+        const dia = 86400000;
 
-                if (inputSalida.value && inputSalida.value < minStr) {
-                    inputSalida.value = minStr;
-                }
+        function actualizarTotal() {
+            const entrada = inputEntrada.value;
+            const salida = inputSalida.value;
+            const personas = Number(inputHuespedes.value);
+            let conflicto = '';
+            const noches = (Date.parse(salida) - Date.parse(entrada)) / dia;
+            if (entrada) {
+                inputSalida.min = new Date(Date.parse(entrada) + minimo * dia).toISOString().slice(0, 10);
             }
-        });
+            if (noches > 0 && ocupadas.some(periodo => periodo.inicio < salida && periodo.fin > entrada)) {
+                conflicto = 'Algunas noches no están disponibles.';
+            }
+            inputSalida.setCustomValidity(conflicto);
+            resumen.textContent = conflicto || (noches >= minimo && inputHuespedes.validity.valid
+                ? noches + ' noches × ' + personas + ' huésped(es) × ' + moneda.format(tarifa)
+                    + ' = ' + moneda.format(noches * personas * tarifa)
+                : 'Selecciona fechas y huéspedes para ver el total.');
+        }
+
+        for (const campo of [inputEntrada, inputSalida, inputHuespedes]) {
+            campo.addEventListener('input', actualizarTotal);
+        }
+        actualizarTotal();
     }
 </script>
 </body>

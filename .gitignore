@@ -5,6 +5,7 @@
 # Archivos temporales
 *.log
 *.tmp
+/uploads/perfiles/
 
 # Archivos del sistema
 .DS_Store

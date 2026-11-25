@@ -1,10 +1,9 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/includes/formularios.php';
 
-require_once __DIR__ . '/config/conexion.php';
-
+$desdePanel = ($_GET['desde'] ?? '') === 'anfitrion' || ($_SESSION['modo'] ?? '') === 'anfitrion';
+$volverPublicacion = $desdePanel ? 'panel_anfitrion.php' : 'index.php';
 $mensajeError = "";
 
 // Tipos de alojamiento: Casa, Apartamento, Habitacion
@@ -20,24 +19,6 @@ if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
     if ($resultadoTipos) {
         while ($fila = $resultadoTipos->fetch_assoc()) {
             $tipos[] = $fila;
-        }
-    }
-}
-
-// ID de anfitrion: priorizar usuario autenticado en sesion, con respaldo activo
-$id_anfitrion = !empty($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : null;
-if ($id_anfitrion === null) {
-    $resultadoUsuario = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' LIMIT 1");
-    if ($resultadoUsuario && $filaUsuario = $resultadoUsuario->fetch_assoc()) {
-        $id_anfitrion = (int)$filaUsuario['id_usuario'];
-    } else {
-        $resultadoCualquierUsuario = $conexion->query("SELECT id_usuario FROM usuarios LIMIT 1");
-        if ($resultadoCualquierUsuario && $filaCualquierUsuario = $resultadoCualquierUsuario->fetch_assoc()) {
-            $id_anfitrion = (int)$filaCualquierUsuario['id_usuario'];
-        } else {
-            $conexion->query("INSERT INTO usuarios (nombre, apellido, correo, password_hash, rol, estado) 
-                              VALUES ('Anfitrión', 'Prueba', 'anfitrion@haloja.local', '$2y$10$abcdefghijklmnopqrstuv', 'usuario', 'activo')");
-            $id_anfitrion = (int)$conexion->insert_id;
         }
     }
 }
@@ -138,6 +119,8 @@ include __DIR__ . '/includes/header.php';
                 </div>
 
                 <form id="wizardForm" method="POST" action="procesar_publicacion.php" enctype="multipart/form-data" novalidate>
+                    <input type="hidden" name="csrf" value="<?= e(tokenFormulario()) ?>">
+                    <input type="hidden" name="desde" value="<?= $desdePanel ? 'anfitrion' : '' ?>">
 
                     <!-- PASO 1: Esenciales -->
                     <section class="wizard-step" data-step="1">
@@ -402,7 +385,7 @@ include __DIR__ . '/includes/header.php';
 
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label for="precio_noche" class="form-label fw-semibold">Precio por noche (USD $) <span class="text-danger">*</span></label>
+                                <label for="precio_noche" class="form-label fw-semibold">Precio por persona y noche (USD) <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="precio_noche" name="precio_noche" step="0.01" min="0.01" placeholder="45.00" required>
@@ -421,7 +404,7 @@ include __DIR__ . '/includes/header.php';
                     <!-- Navegación del Wizard -->
                     <div class="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
                         <button type="button" class="btn btn-outline-secondary px-4 d-none" id="btnAnterior">← Atrás</button>
-                        <a href="index.php" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Cancelar</a>
+                        <a href="<?= e($volverPublicacion) ?>" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Regresar</a>
                         <div class="ms-auto d-flex gap-2">
                             <button type="button" class="btn btn-dark px-4" id="btnSiguiente">Siguiente →</button>
                             <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar">🚀 Publicar alojamiento</button>
@@ -727,7 +710,7 @@ include __DIR__ . '/includes/header.php';
             const precio = parseFloat(document.getElementById('precio_noche').value);
             const limpieza = parseFloat(document.getElementById('tarifa_limpieza').value || '0');
             if (isNaN(precio) || precio <= 0) {
-                showAlert('El precio por noche debe ser mayor a $0.'); return false;
+                showAlert('La tarifa por persona y noche debe ser mayor a $0.'); return false;
             }
             if (isNaN(limpieza) || limpieza < 0) {
                 showAlert('La tarifa de limpieza no puede ser negativa.'); return false;

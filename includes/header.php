@@ -3,19 +3,26 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-$esAnfitrionReal = false;
+$usuarioMenu = null;
+$idUsuarioMenu = (int) ($_SESSION['id_usuario'] ?? 0);
 $modoActual = $_SESSION['modo'] ?? 'huesped';
-$paginaActual = basename($_SERVER['PHP_SELF']);
+$paginaActual = basename($_SERVER['SCRIPT_NAME'] ?? '');
 
-if (isset($_SESSION['id_usuario'])) {
+if ($idUsuarioMenu > 0) {
     if (!isset($conexion)) {
         require_once __DIR__ . '/../config/conexion.php';
     }
-    $stmtCheck = $conexion->prepare("SELECT COUNT(*) as total FROM alojamientos WHERE id_anfitrion = ?");
-    $stmtCheck->bind_param('i', $_SESSION['id_usuario']);
-    $stmtCheck->execute();
-    $esAnfitrionReal = $stmtCheck->get_result()->fetch_assoc()['total'] > 0;
+    // Carga la foto guardada en cada página, también después de editar el perfil.
+    $stmtMenu = $conexion->prepare("
+        SELECT u.nombre, u.foto_perfil,
+            EXISTS(SELECT 1 FROM alojamientos a WHERE a.id_anfitrion = u.id_usuario) AS es_anfitrion
+        FROM usuarios u WHERE u.id_usuario = ? AND u.estado = 'activo'
+    ");
+    $stmtMenu->bind_param('i', $idUsuarioMenu);
+    $stmtMenu->execute();
+    $usuarioMenu = $stmtMenu->get_result()->fetch_assoc();
 }
+$esAnfitrionReal = !empty($usuarioMenu['es_anfitrion']);
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -26,6 +33,7 @@ if (isset($_SESSION['id_usuario'])) {
     
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/tema-haloja.css?v=4">
+    <link rel="stylesheet" href="assets/css/reservas.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
@@ -43,12 +51,6 @@ if (isset($_SESSION['id_usuario'])) {
             </div>
 
 <?php
-// Detectamos qué filtro de tipo está activo en la URL (si existe)
-$tipoActivo = $_GET['tipo'] ?? '';
-$enInicio = ($paginaActual === 'index.php');
-?>
-
-<?php
 // Detectamos el id_tipo activo en la URL (0 = Todos)
 $tipoActivo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
 $enInicio = ($paginaActual === 'index.php');
@@ -56,12 +58,12 @@ $enInicio = ($paginaActual === 'index.php');
 
 <!-- CENTRO: Opciones según el modo -->
 <div class="bloque-central d-none d-lg-flex justify-content-center">
-    <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
+    <?php if ($usuarioMenu && $modoActual === 'anfitrion'): ?>
         
-        <!-- MODO ANFITRIÓN
+        <!-- MODO ANFITRIÓN -->
         <ul class="navbar-nav flex-row gap-2">
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
+                <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php" data-avisos-reserva="anfitrion">
                     <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
                 </a>
             </li>
@@ -71,11 +73,11 @@ $enInicio = ($paginaActual === 'index.php');
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php">
+                <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php?desde=anfitrion">
                     <i class="bi bi-house-add fs-5"></i> Publicar casa
                 </a>
             </li>
-        </ul> -->
+        </ul>
 
     <?php else: ?>
 
@@ -107,16 +109,27 @@ $enInicio = ($paginaActual === 'index.php');
 </div>
 
             <!-- DERECHA: Menú de usuario o Acceso -->
-            <div class="bloque-derecho d-flex align-items-center justify-content-end">
-                <?php if (isset($_SESSION['id_usuario'])): ?>
+            <div class="bloque-derecho d-flex align-items-center justify-content-end gap-2">
+                <?php if ($usuarioMenu): ?>
+                    <?php if ($esAnfitrionReal || $modoActual === 'anfitrion'): ?>
+                        <a class="btn bg-white border rounded-circle px-2 <?= $modoActual === 'anfitrion' ? 'd-lg-none' : '' ?>" href="panel_anfitrion.php" aria-label="Reservas recibidas" title="Reservas recibidas" data-avisos-reserva="anfitrion">
+                            <i class="bi bi-calendar-check" aria-hidden="true"></i>
+                        </a>
+                    <?php endif; ?>
+                    <a class="btn bg-white border rounded-circle px-2" href="panel_cliente.php" aria-label="Mis reservas" title="Mis reservas" data-avisos-reserva="huesped">
+                        <i class="bi bi-suitcase-lg" aria-hidden="true"></i>
+                    </a>
                     
                     <div class="dropdown">
-                        <!-- Botón píldora con las 3 rayitas e inicial -->
-                        <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);"></i>
-                            <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);">
-                                <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
-                            </div>
+                        <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de usuario">
+                            <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);" aria-hidden="true"></i>
+                            <?php if ($usuarioMenu['foto_perfil']): ?>
+                                <img src="<?= htmlspecialchars($usuarioMenu['foto_perfil']) ?>" class="rounded-circle object-fit-cover" width="34" height="34" alt="">
+                            <?php else: ?>
+                                <span class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);" aria-hidden="true">
+                                    <?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioMenu['nombre'], 0, 1))) ?>
+                                </span>
+                            <?php endif; ?>
                         </button>
                         
 <!-- Menú desplegable -->
@@ -125,7 +138,7 @@ $enInicio = ($paginaActual === 'index.php');
     <!-- Saludo e indicador de modo actual -->
     <li class="px-3 py-2 d-flex align-items-center justify-content-between">
         <span class="fw-bold" style="color: var(--dv-forest-deep);">
-            Hola, <?= htmlspecialchars($_SESSION['nombre']) ?>
+            Hola, <?= htmlspecialchars($usuarioMenu['nombre']) ?>
         </span>
         <span class="badge" style="background-color: var(--dv-forest-soft); color: var(--dv-forest);">
             <?= $modoActual === 'anfitrion' ? 'Anfitrión' : 'Huésped' ?>
@@ -142,7 +155,7 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- En Modo Anfitrión: en PC ya están en el header, así que solo se muestran aquí en celular (d-lg-none) -->
         <li class="d-lg-none"><hr class="dropdown-divider my-1"></li>
         <li class="d-lg-none">
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_anfitrion.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_anfitrion.php" data-avisos-reserva="anfitrion">
                 <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
             </a>
         </li>
@@ -152,7 +165,7 @@ $enInicio = ($paginaActual === 'index.php');
             </a>
         </li>
         <li class="d-lg-none">
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php?desde=anfitrion">
                 <i class="bi bi-house-add fs-5"></i> Publicar casa
             </a>
         </li>
@@ -160,19 +173,19 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- En Modo Huésped: solo opciones de huésped -->
         <li><hr class="dropdown-divider my-1"></li>
         <li>
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="modulos/reservas/mis_solicitudes.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_cliente.php" data-avisos-reserva="huesped">
                 <i class="bi bi-luggage fs-5"></i> Mis reservas
             </a>
         </li>
         <li>
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
-                <i class="bi bi-house-add fs-5"></i> Publicar casa
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="cambiar_modo.php?modo=anfitrion" data-avisos-reserva="anfitrion">
+                <i class="bi bi-house-add fs-5"></i> Panel de anfitrión
             </a>
         </li>
     <?php endif; ?>
 
     <!-- Cambio de modo -->
-    <?php if ($esAnfitrionReal): ?>
+    <?php if ($esAnfitrionReal || $modoActual === 'anfitrion'): ?>
         <li><hr class="dropdown-divider my-1"></li>
         <?php if ($modoActual === 'anfitrion'): ?>
             <li>
@@ -213,24 +226,25 @@ $enInicio = ($paginaActual === 'index.php');
         </div>
 
         <!-- Barra de categorías solo visible en celulares/tablets (Modo Huésped) -->
-    <?php if (!isset($_SESSION['id_usuario']) || $modoActual !== 'anfitrion'): ?>
+    <?php if (!$usuarioMenu || $modoActual !== 'anfitrion'): ?>
         <div class="d-flex d-lg-none overflow-auto border-top px-3 py-2 gap-2" style="scrollbar-width: none;">
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === '') ? 'active' : '' ?>" href="index.php">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="index.php">
                 <i class="bi bi-grid"></i> Todos
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Casa') ? 'active' : '' ?>" href="index.php?tipo=Casa">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="index.php?tipo=1">
                 <i class="bi bi-house-door"></i> Casa
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Apartamento') ? 'active' : '' ?>" href="index.php?tipo=Apartamento">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="index.php?tipo=2">
                 <i class="bi bi-building"></i> Apartamento
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 'Habitación') ? 'active' : '' ?>" href="index.php?tipo=Habitación">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="index.php?tipo=3">
                 <i class="bi bi-door-open"></i> Habitación
             </a>
         </div>
     <?php endif; ?>
 </nav>
 
-    </nav>
-
     <div class="container mb-5">
+        <?php if ($usuarioMenu): ?>
+            <?php require __DIR__ . '/aviso_reservas.php'; ?>
+        <?php endif; ?>
