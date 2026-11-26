@@ -111,7 +111,7 @@ require_once __DIR__ . '/includes/header.php';
             <div class="modal-body text-center p-4">
                 <h4 class="mb-3">Cuenta creada con exito</h4>
                 <p>Tu cuenta ha sido registrada correctamente.</p>
-                <a href="index.php" class="btn btn-dark px-4">OK</a>
+                <a href="login.php" class="btn btn-dark px-4">Iniciar sesión</a>
             </div>
         </div>
     </div>

@@ -31,6 +31,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
                 if ($fila['estado'] !== 'activo') {
                     $error = "Tu cuenta ha sido suspendida. Contacta al administrador.";
                 } else {
+                    session_regenerate_id(true);
                     // credenciales guardadas
                     $_SESSION['id_usuario'] = $fila['id_usuario'];
                     $_SESSION['nombre'] = $fila['nombre'];
