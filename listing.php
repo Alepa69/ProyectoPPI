@@ -1,55 +1,34 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 require_once __DIR__ . '/config/conexion.php';
 
-$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
-    'options' => ['min_range' => 1],
-]);
+date_default_timezone_set('America/El_Salvador');
 
-if (!$id) {
+$id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
+if (!$id || $id <= 0) {
     http_response_code(404);
     exit('Alojamiento no encontrado.');
 }
 
-function escapar($texto): string
+function escapar($texto)
 {
     return htmlspecialchars((string) $texto, ENT_QUOTES, 'UTF-8');
 }
 
-function leerFecha($valor): ?DateTimeImmutable
-{
-    if (!is_string($valor)) {
-        return null;
-    }
-
-    $fecha = DateTimeImmutable::createFromFormat(
-        '!Y-m-d',
-        $valor,
-        new DateTimeZone('America/El_Salvador')
-    );
-
-    return $fecha && $fecha->format('Y-m-d') === $valor ? $fecha : null;
-}
-
-// Verificar si el usuario actual es administrador activo.
+// Verificar si el usuario actual es administrador activo
 $idUsuario = (int) ($_SESSION['id_usuario'] ?? 0);
 $esAdmin = false;
 
 if ($idUsuario > 0) {
-    $stmtRol = $conexion->prepare("
-        SELECT rol, estado
-        FROM usuarios
-        WHERE id_usuario = ?
-        LIMIT 1
-    ");
+    $stmtRol = $conexion->prepare("SELECT rol, estado FROM usuarios WHERE id_usuario = ? LIMIT 1");
     $stmtRol->bind_param('i', $idUsuario);
     $stmtRol->execute();
     $datosRol = $stmtRol->get_result()->fetch_assoc();
     $stmtRol->close();
 
-    $esAdmin = $datosRol
-        && $datosRol['rol'] === 'administrador'
-        && $datosRol['estado'] === 'activo';
+    $esAdmin = $datosRol && $datosRol['rol'] === 'administrador' && $datosRol['estado'] === 'activo';
 }
 
 $adminFlash = null;
@@ -63,9 +42,8 @@ if ($esAdmin) {
     }
 }
 
-// Información general del alojamiento y del anfitrión.
-// El administrador puede ver publicaciones en cualquier estado; el resto solo publicadas.
-$filtroEstado = $esAdmin ? '' : " AND a.estado = 'publicado'";
+// El administrador puede ver publicaciones en cualquier estado; los demás solo publicadas de anfitriones activos
+$filtroEstado = $esAdmin ? '' : " AND a.estado = 'publicado' AND u.estado = 'activo'";
 
 $consulta = $conexion->prepare("
     SELECT
@@ -78,7 +56,7 @@ $consulta = $conexion->prepare("
         a.reglas_adicionales, a.precio_persona_noche, a.precio_noche,
         a.tarifa_limpieza, a.id_anfitrion, a.estado, a.motivo_bloqueo,
         u.nombre AS nombre_anfitrion, u.apellido AS apellido_anfitrion,
-        u.creado_en AS anfitrion_desde,
+        u.foto_perfil AS foto_anfitrion, u.creado_en AS anfitrion_desde,
         t.nombre AS tipo_alojamiento
     FROM alojamientos AS a
     INNER JOIN usuarios AS u ON u.id_usuario = a.id_anfitrion
@@ -96,7 +74,7 @@ if (!$casa) {
     exit('Este alojamiento no está publicado o no existe.');
 }
 
-// Fotos: se usa la tabla principal y la tabla anterior como respaldo.
+// Cargar fotos (tabla nueva con respaldo de tabla anterior)
 $fotos = [];
 $consultaFotos = $conexion->prepare("
     SELECT ruta_o_url AS ruta
@@ -106,8 +84,8 @@ $consultaFotos = $conexion->prepare("
 ");
 $consultaFotos->bind_param('i', $id);
 $consultaFotos->execute();
-$resultadoFotos = $consultaFotos->get_result();
-while ($foto = $resultadoFotos->fetch_assoc()) {
+$resFotos = $consultaFotos->get_result();
+while ($foto = $resFotos->fetch_assoc()) {
     $ruta = trim((string) ($foto['ruta'] ?? ''));
     if ($ruta !== '' && !in_array($ruta, $fotos, true)) {
         $fotos[] = $ruta;
@@ -116,25 +94,25 @@ while ($foto = $resultadoFotos->fetch_assoc()) {
 $consultaFotos->close();
 
 if (!$fotos) {
-    $consultaFotosLegacy = $conexion->prepare("
+    $consultaLegacy = $conexion->prepare("
         SELECT ruta_archivo AS ruta
         FROM fotos_alojamiento
         WHERE id_alojamiento = ?
         ORDER BY posicion ASC
     ");
-    $consultaFotosLegacy->bind_param('i', $id);
-    $consultaFotosLegacy->execute();
-    $resultadoFotosLegacy = $consultaFotosLegacy->get_result();
-    while ($foto = $resultadoFotosLegacy->fetch_assoc()) {
+    $consultaLegacy->bind_param('i', $id);
+    $consultaLegacy->execute();
+    $resLegacy = $consultaLegacy->get_result();
+    while ($foto = $resLegacy->fetch_assoc()) {
         $ruta = trim((string) ($foto['ruta'] ?? ''));
         if ($ruta !== '' && !in_array($ruta, $fotos, true)) {
             $fotos[] = $ruta;
         }
     }
-    $consultaFotosLegacy->close();
+    $consultaLegacy->close();
 }
 
-// Amenidades seleccionadas por el anfitrión al publicar.
+// Cargar amenidades
 $amenidades = [];
 $consultaAmenidades = $conexion->prepare("
     SELECT am.nombre, am.categoria
@@ -145,15 +123,27 @@ $consultaAmenidades = $conexion->prepare("
 ");
 $consultaAmenidades->bind_param('i', $id);
 $consultaAmenidades->execute();
-$resultadoAmenidades = $consultaAmenidades->get_result();
-while ($amenidad = $resultadoAmenidades->fetch_assoc()) {
-    $amenidades[] = $amenidad;
-}
+$amenidades = $consultaAmenidades->get_result()->fetch_all(MYSQLI_ASSOC);
 $consultaAmenidades->close();
 
-// Datos derivados para la presentación.
+// Cargar métodos de pago informativos aceptados
+$metodosPago = [];
+$consultaMetodos = $conexion->prepare("
+    SELECT mp.nombre
+    FROM alojamiento_metodo_pago AS amp
+    INNER JOIN metodos_pago AS mp ON mp.id_metodo_pago = amp.id_metodo_pago
+    WHERE amp.id_alojamiento = ?
+    ORDER BY mp.id_metodo_pago ASC
+");
+$consultaMetodos->bind_param('i', $id);
+$consultaMetodos->execute();
+$metodosPago = $consultaMetodos->get_result()->fetch_all(MYSQLI_ASSOC);
+$consultaMetodos->close();
+
 $esAnfitrion = $idUsuario === (int) $casa['id_anfitrion'];
-$hoy = new DateTimeImmutable('today', new DateTimeZone('America/El_Salvador'));
+$zonaSV = new DateTimeZone('America/El_Salvador');
+$ahora = new DateTimeImmutable('now', $zonaSV);
+$hoy = new DateTimeImmutable('today', $zonaSV);
 $error = '';
 $confirmacion = $_SESSION['confirmacion_reserva'][$id] ?? '';
 unset($_SESSION['confirmacion_reserva'][$id]);
@@ -188,7 +178,7 @@ $tipoEspacio = [
     'habitacion_compartida' => 'Habitación compartida',
 ][$casa['tipo_espacio']] ?? 'Alojamiento';
 
-$precioPorNoche = (float) $casa['precio_persona_noche'];
+$precioPorPersonaNoche = (float) $casa['precio_persona_noche'];
 $tarifaLimpieza = (float) $casa['tarifa_limpieza'];
 $totalFotos = count($fotos);
 $fotosVisibles = min($totalFotos, 5);
@@ -197,64 +187,85 @@ if (empty($_SESSION['csrf_reserva'])) {
     $_SESSION['csrf_reserva'] = bin2hex(random_bytes(32));
 }
 
-// Proceso de solicitud de reserva.
+// Procesar solicitud de reserva (en pasos claros)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $entrada = leerFecha($_POST['entrada'] ?? null);
-    $salida = leerFecha($_POST['salida'] ?? null);
-    $huespedes = filter_input(INPUT_POST, 'huespedes', FILTER_VALIDATE_INT);
-    $token = $_POST['csrf'] ?? '';
+    $entradaStr = trim((string) ($_POST['entrada'] ?? ''));
+    $salidaStr = trim((string) ($_POST['salida'] ?? ''));
+    $huespedes = (int) ($_POST['huespedes'] ?? 0);
+    $token = (string) ($_POST['csrf'] ?? '');
 
-    if (!$idUsuario || $esAnfitrion) {
-        $error = 'Inicia sesión con una cuenta distinta a la del anfitrión.';
+    $entrada = DateTimeImmutable::createFromFormat('!Y-m-d', $entradaStr, $zonaSV);
+    $salida = DateTimeImmutable::createFromFormat('!Y-m-d', $salidaStr, $zonaSV);
+    $fechasValidas = $entrada && $salida && $entrada->format('Y-m-d') === $entradaStr && $salida->format('Y-m-d') === $salidaStr;
+
+    // Verificar que el usuario esté activo
+    $usuarioActivo = false;
+    if ($idUsuario > 0) {
+        $stmtU = $conexion->prepare("SELECT estado FROM usuarios WHERE id_usuario = ? LIMIT 1");
+        $stmtU->bind_param('i', $idUsuario);
+        $stmtU->execute();
+        $uFila = $stmtU->get_result()->fetch_assoc();
+        $stmtU->close();
+        $usuarioActivo = $uFila && $uFila['estado'] === 'activo';
+    }
+
+    if (!$idUsuario || !$usuarioActivo || $esAnfitrion) {
+        $error = 'Inicia sesión con una cuenta activa distinta a la del anfitrión.';
     } elseif ($casa['estado'] !== 'publicado') {
         $error = 'Este alojamiento no está disponible para reservas en este momento.';
-    } elseif (!is_string($token) || !hash_equals($_SESSION['csrf_reserva'], $token)) {
+    } elseif (!hash_equals($_SESSION['csrf_reserva'], $token)) {
         $error = 'Recarga la página y vuelve a intentarlo.';
-    } elseif (!$entrada || !$salida || $entrada < $hoy || $salida <= $entrada) {
-        $error = 'Elige una entrada desde hoy y una salida posterior.';
-    } elseif (!$huespedes || $huespedes < 1 || $huespedes > (int) $casa['capacidad']) {
-        $error = 'La cantidad de huéspedes debe estar dentro de la capacidad.';
+    } elseif (!$fechasValidas || $entrada < $hoy || $salida <= $entrada) {
+        $error = 'Elige una fecha de entrada desde hoy y una salida posterior.';
+    } elseif ($entradaStr === $hoy->format('Y-m-d') && $ahora >= new DateTimeImmutable($entradaStr . ' ' . ($casa['hora_checkin'] ?: '15:00:00'), $zonaSV)) {
+        $error = 'La hora de entrada para hoy ya pasó. Elige a partir de mañana.';
+    } elseif ($huespedes < 1 || $huespedes > (int) $casa['capacidad']) {
+        $error = 'La cantidad de huéspedes debe estar entre 1 y ' . (int) $casa['capacidad'] . '.';
     } else {
-        $fechaEntrada = $entrada->format('Y-m-d');
-        $fechaSalida = $salida->format('Y-m-d');
+        $noches = (int) $entrada->diff($salida)->days;
+        if ($noches < (int) $casa['estancia_minima']) {
+            $error = 'Este alojamiento requiere una estancia mínima de ' . (int) $casa['estancia_minima'] . ' noche(s).';
+        } else {
+            // 1. Verificar que no haya una reserva aceptada que se cruce
+            $stmtCruce = $conexion->prepare("
+                SELECT id_reserva
+                FROM reservas
+                WHERE id_alojamiento = ?
+                  AND estado = 'aceptada'
+                  AND fecha_entrada < ?
+                  AND fecha_salida > ?
+                LIMIT 1
+            ");
+            $stmtCruce->bind_param('iss', $id, $salidaStr, $entradaStr);
+            $stmtCruce->execute();
+            $hayCruce = $stmtCruce->get_result()->num_rows > 0;
+            $stmtCruce->close();
 
-        // La base toma la tarifa del alojamiento y calcula el total.
-        $guardar = $conexion->prepare("
-            INSERT INTO reservas (
-                id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
-                cantidad_huespedes, precio_persona_noche_aplicado, total, estado
-            )
-            SELECT a.id_alojamiento, u.id_usuario, datos.entrada, datos.salida,
-                   datos.huespedes, a.precio_persona_noche,
-                   DATEDIFF(datos.salida, datos.entrada) * datos.huespedes * a.precio_persona_noche,
-                   'pendiente'
-            FROM alojamientos AS a
-            JOIN usuarios AS u ON u.id_usuario = ? AND u.estado = 'activo'
-            CROSS JOIN (SELECT ? AS entrada, ? AS salida, ? AS huespedes) AS datos
-            WHERE a.id_alojamiento = ?
-              AND a.estado = 'publicado'
-              AND a.id_anfitrion <> u.id_usuario
-              AND a.capacidad >= datos.huespedes
-              AND NOT EXISTS (
-                  SELECT 1
-                  FROM reservas AS r
-                  WHERE r.id_alojamiento = a.id_alojamiento
-                    AND r.estado = 'aceptada'
-                    AND r.fecha_entrada < datos.salida
-                    AND r.fecha_salida > datos.entrada
-              )
-        ");
-        $guardar->bind_param('issii', $idUsuario, $fechaEntrada, $fechaSalida, $huespedes, $id);
-        $guardar->execute();
+            if ($hayCruce) {
+                $error = 'Esas fechas ya están ocupadas por otra reserva aceptada.';
+            } else {
+                // 2. Calcular total desde el precio guardado en la base de datos
+                $total = round($noches * $huespedes * $precioPorPersonaNoche, 2);
 
-        if ($guardar->affected_rows === 1) {
-            $_SESSION['confirmacion_reserva'][$id] =
-                'Solicitud enviada. Quedó pendiente de respuesta del anfitrión.';
-            header('Location: listing.php?id=' . $id, true, 303);
-            exit;
+                // 3. Guardar solicitud en estado pendiente
+                $guardar = $conexion->prepare("
+                    INSERT INTO reservas (
+                        id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
+                        cantidad_huespedes, precio_persona_noche_aplicado, total, estado
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
+                ");
+                $guardar->bind_param('iissidd', $id, $idUsuario, $entradaStr, $salidaStr, $huespedes, $precioPorPersonaNoche, $total);
+
+                if ($guardar->execute() && $guardar->affected_rows === 1) {
+                    $_SESSION['confirmacion_reserva'][$id] =
+                        'Solicitud enviada por $' . number_format($total, 2) . '. Quedó pendiente de respuesta del anfitrión.';
+                    header('Location: listing.php?id=' . $id, true, 303);
+                    exit;
+                }
+
+                $error = 'No se pudo enviar la solicitud. Intenta de nuevo.';
+            }
         }
-
-        $error = 'No se pudo solicitar la reserva. Revisa tu cuenta y prueba otras fechas.';
     }
 }
 ?>
@@ -263,10 +274,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?= escapar($casa['titulo']) ?> | Davinci</title>
+    <title><?= escapar($casa['titulo']) ?> | HALOJA</title>
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="assets/css/inicio.css">
-    <link rel="stylesheet" href="assets/css/tema-davinci.css">
+    <link rel="stylesheet" href="assets/css/tema-haloja.css">
     <link rel="stylesheet" href="assets/css/listing.css">
 </head>
 <body>
@@ -331,7 +342,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <header class="listing-heading">
             <div>
-                <p class="listing-eyebrow">DAVINCI · ALOJAMIENTOS</p>
+                <p class="listing-eyebrow">HALOJA · ALOJAMIENTOS</p>
                 <h1><?= escapar($casa['titulo']) ?></h1>
                 <p class="listing-location-line">
                     <span aria-hidden="true">⌖</span>
@@ -391,17 +402,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
                 </section>
 
+                <section class="listing-section">
+                    <div class="listing-section-heading"><div><p class="listing-eyebrow">ACUERDO DIRECTO</p><h2>Métodos de pago informativos</h2></div></div>
+                    <?php if ($metodosPago): ?>
+                        <div class="d-flex flex-wrap gap-2">
+                            <?php foreach ($metodosPago as $mp): ?>
+                                <span class="badge bg-light text-dark border px-3 py-2">✓ <?= escapar($mp['nombre']) ?></span>
+                            <?php endforeach; ?>
+                        </div>
+                        <p class="listing-muted-note mt-2">El pago se coordina directamente con el anfitrión fuera de la plataforma.</p>
+                    <?php else: ?>
+                        <p class="listing-muted-note">Consultar métodos de pago directamente con el anfitrión.</p>
+                    <?php endif; ?>
+                </section>
+
                 <section class="listing-section listing-host-section">
                     <div class="listing-section-heading"><div><p class="listing-eyebrow">TU ANFITRIÓN</p><h2>Conoce a <?= escapar($casa['nombre_anfitrion']) ?></h2></div></div>
-                    <div class="listing-host-card">
-                        <div class="listing-host-avatar" aria-hidden="true"><?= escapar($iniciales) ?></div>
+                    <a href="perfil_anfitrion.php?id=<?= (int) $casa['id_anfitrion'] ?>" class="listing-host-card text-decoration-none">
+                        <?php if (!empty($casa['foto_anfitrion'])): ?>
+                            <img src="<?= escapar($casa['foto_anfitrion']) ?>" alt="Foto de <?= escapar($nombreAnfitrion) ?>" class="rounded-circle object-fit-cover" width="58" height="58">
+                        <?php else: ?>
+                            <div class="listing-host-avatar" aria-hidden="true"><?= escapar($iniciales) ?></div>
+                        <?php endif; ?>
                         <div class="listing-host-info">
                             <strong><?= escapar($nombreAnfitrion) ?></strong>
-                            <span>Anfitrión en Davinci</span>
+                            <span>Anfitrión en HALOJA</span>
                             <small>Cuenta creada el <?= escapar($fechaAnfitrion) ?></small>
                         </div>
-                        <span class="listing-host-label">Anfitrión</span>
-                    </div>
+                        <span class="listing-host-label">Ver perfil</span>
+                    </a>
                 </section>
 
                 <section class="listing-section">
@@ -432,29 +461,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <?php endif; ?>
                     <a class="listing-map-link" href="<?= escapar($mapaEnlace) ?>" target="_blank" rel="noopener noreferrer">Abrir ubicación en Google Maps <span aria-hidden="true">↗</span></a>
                 </section>
-
-                <section class="listing-section listing-reviews-section">
-                    <div class="listing-section-heading"><div><p class="listing-eyebrow">EXPERIENCIAS DE HUÉSPEDES</p><h2>Reseñas y comentarios</h2></div></div>
-                    <div class="listing-empty-reviews">
-                        <span class="listing-review-icon" aria-hidden="true">☆</span>
-                        <div><strong>Aún no hay reseñas</strong><p>Cuando los huéspedes compartan su experiencia, sus comentarios aparecerán en esta sección.</p></div>
-                    </div>
-                </section>
             </div>
 
             <aside class="col-lg-4 listing-aside">
                 <div class="listing-booking-card">
                     <div class="listing-price-block">
-                        <div><strong>$<?= number_format($precioPorNoche, 2) ?></strong><span>por persona / noche</span></div>
+                        <div><strong>$<?= number_format($precioPorPersonaNoche, 2) ?></strong><span>por persona / noche</span></div>
                         <span class="listing-price-tag">USD</span>
                     </div>
                     <?php if ($tarifaLimpieza > 0): ?>
                         <div class="listing-cleaning-fee"><span>Tarifa de limpieza indicada</span><strong>$<?= number_format($tarifaLimpieza, 2) ?></strong></div>
-                        <p class="listing-cleaning-note">Este cargo se muestra como información; el cálculo automático de la solicitud todavía no lo suma.</p>
                     <?php endif; ?>
                     <div class="listing-booking-divider"></div>
                     <h2>Solicitar reserva</h2>
-                    <p class="listing-booking-intro">Elige tus fechas y la cantidad de huéspedes para enviar una solicitud al anfitrión.</p>
+                    <p class="listing-booking-intro">Elige tus fechas y la cantidad de huéspedes para calcular el total y enviar tu solicitud.</p>
 
                     <?php if ($confirmacion): ?>
                         <p class="alert alert-success" role="status"><?= escapar($confirmacion) ?></p>
@@ -481,6 +501,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label for="huespedes" class="form-label">Número de huéspedes</label>
                             <input type="number" name="huespedes" id="huespedes" class="form-control" min="1" max="<?= (int) $casa['capacidad'] ?>" value="1" required>
                             <p class="listing-capacity-note">Este alojamiento admite hasta <?= (int) $casa['capacidad'] ?> huésped(es).</p>
+
+                            <div id="resumenCalculo" class="alert alert-light border small d-none mb-3"></div>
+
                             <button type="submit" class="btn btn-success w-100">Enviar solicitud</button>
                             <p class="listing-booking-footnote">La solicitud quedará pendiente hasta que el anfitrión responda.</p>
                         </form>
@@ -522,7 +545,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 <script src="assets/js/bootstrap.bundle.min.js"></script>
 <script>
-    // Abre el visor en la fotografía que seleccionó el usuario.
+    // Visor de fotografías
     const galleryModalElement = document.getElementById('listingGalleryModal');
     const photoCarouselElement = document.getElementById('listingPhotoCarousel');
 
@@ -530,18 +553,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         const galleryModal = bootstrap.Modal.getOrCreateInstance(galleryModalElement);
         const carouselItems = Array.from(photoCarouselElement.querySelectorAll('.carousel-item'));
 
-        document.querySelectorAll('[data-gallery-index]').forEach((button) => {
-            button.addEventListener('click', () => {
+        document.querySelectorAll('[data-gallery-index]').forEach(function (button) {
+            button.addEventListener('click', function () {
                 const selectedIndex = Number(button.dataset.galleryIndex || 0);
-                carouselItems.forEach((item, index) => item.classList.toggle('active', index === selectedIndex));
+                carouselItems.forEach(function (item, index) {
+                    item.classList.toggle('active', index === selectedIndex);
+                });
                 galleryModal.show();
             });
         });
     }
 
-    // La fecha de salida debe ser posterior a la fecha de entrada.
+    // Cálculo en vivo del importe estimado (noches x huéspedes x precio)
     const inputEntrada = document.getElementById('entrada');
     const inputSalida = document.getElementById('salida');
+    const inputHuespedes = document.getElementById('huespedes');
+    const resumenCalculo = document.getElementById('resumenCalculo');
+    const precioPersonaNoche = <?= json_encode($precioPorPersonaNoche) ?>;
+
+    function actualizarCalculo() {
+        if (!inputEntrada || !inputSalida || !inputHuespedes || !resumenCalculo) return;
+        if (!inputEntrada.value || !inputSalida.value) {
+            resumenCalculo.classList.add('d-none');
+            return;
+        }
+        const f1 = new Date(inputEntrada.value + 'T00:00:00');
+        const f2 = new Date(inputSalida.value + 'T00:00:00');
+        const noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
+        const huespedes = parseInt(inputHuespedes.value || '1', 10);
+
+        if (noches > 0 && huespedes > 0) {
+            const total = (noches * huespedes * precioPersonaNoche).toFixed(2);
+            resumenCalculo.innerHTML = noches + ' noche(s) × ' + huespedes + ' huésped(es) × $' +
+                precioPersonaNoche.toFixed(2) + ' = <strong>$' + total + ' USD</strong>';
+            resumenCalculo.classList.remove('d-none');
+        } else {
+            resumenCalculo.classList.add('d-none');
+        }
+    }
 
     if (inputEntrada && inputSalida) {
         inputEntrada.addEventListener('change', function () {
@@ -557,7 +606,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     inputSalida.value = minStr;
                 }
             }
+            actualizarCalculo();
         });
+        inputSalida.addEventListener('change', actualizarCalculo);
+        if (inputHuespedes) {
+            inputHuespedes.addEventListener('input', actualizarCalculo);
+        }
     }
 
     <?php if ($esAdmin): ?>

@@ -211,7 +211,7 @@ include __DIR__ . '/includes/header.php';
                             <th>ID</th>
                             <th>Publicación</th>
                             <th>Anfitrión</th>
-                            <th>Precio / noche</th>
+                            <th>Precio / pers. · noche</th>
                             <th>Estado</th>
                             <th class="text-end">Acciones</th>
                         </tr>

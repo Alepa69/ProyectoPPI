@@ -37,6 +37,7 @@ if (!$esCliente && !$esAnfitrion) {
 
 //guarda el mensaje
 if ($_SERVER['REQUEST_METHOD']==='POST') {
+    verificar_csrf();
     $texto=trim($_POST['mensaje']??'');
 
     if ($texto!=='') {
@@ -107,6 +108,7 @@ include __DIR__ . '/includes/header.php';
 
 <!--enciar mensaje-->
 <form method="POST" action="chat.php?id_reserva=<?= $idReserva ?>" class="d-flex gap-2">
+    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
     <input type="text" name="mensaje" class="form-control" placeholder="Escribe un mensaje..." required autocomplete="off">
     <button type="submit" class="btn btn-success">Enviar</button>
 </form>

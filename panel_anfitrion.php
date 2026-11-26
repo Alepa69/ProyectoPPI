@@ -137,11 +137,13 @@ include __DIR__ . '/includes/header.php';
                             <td>
                                 <?php if ($r['estado'] === 'pendiente'): ?>
                                     <form method="POST" action="responder_reserva.php" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">
                                         <input type="hidden" name="accion" value="aceptar">
                                         <button class="btn btn-sm btn-success">Aceptar</button>
                                     </form>
                                     <form method="POST" action="responder_reserva.php" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">
                                         <input type="hidden" name="accion" value="rechazar">
                                         <button class="btn btn-sm btn-outline-secondary">Rechazar</button>
@@ -149,6 +151,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php elseif ($r['estado'] === 'aceptada'): ?>
                                     <form method="POST" action="responder_reserva.php" class="d-inline"
                                           onsubmit="return confirm('¿Cancelar esta reserva?');">
+                                        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">
                                         <input type="hidden" name="accion" value="cancelar">
                                         <button class="btn btn-sm btn-outline-danger">Cancelar</button>

@@ -3,18 +3,31 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$usuarioMenu = null;
 $esAnfitrionReal = false;
 $modoActual = $_SESSION['modo'] ?? 'huesped';
 $paginaActual = basename($_SERVER['PHP_SELF']);
 
-if (isset($_SESSION['id_usuario'])) {
+if (!empty($_SESSION['id_usuario'])) {
     if (!isset($conexion)) {
         require_once __DIR__ . '/../config/conexion.php';
     }
-    $stmtCheck = $conexion->prepare("SELECT COUNT(*) as total FROM alojamientos WHERE id_anfitrion = ?");
-    $stmtCheck->bind_param('i', $_SESSION['id_usuario']);
-    $stmtCheck->execute();
-    $esAnfitrionReal = $stmtCheck->get_result()->fetch_assoc()['total'] > 0;
+    $idUsuarioMenu = (int) $_SESSION['id_usuario'];
+    $stmtMenu = $conexion->prepare("
+        SELECT u.nombre, u.rol, u.foto_perfil,
+               EXISTS(SELECT 1 FROM alojamientos a WHERE a.id_anfitrion = u.id_usuario) AS es_anfitrion
+        FROM usuarios u
+        WHERE u.id_usuario = ? AND u.estado = 'activo'
+        LIMIT 1
+    ");
+    $stmtMenu->bind_param('i', $idUsuarioMenu);
+    $stmtMenu->execute();
+    $usuarioMenu = $stmtMenu->get_result()->fetch_assoc();
+    $stmtMenu->close();
+
+    if ($usuarioMenu) {
+        $esAnfitrionReal = !empty($usuarioMenu['es_anfitrion']);
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -23,7 +36,7 @@ if (isset($_SESSION['id_usuario'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'HALOJA' ?></title>
-    
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="assets/css/tema-haloja.css?v=4">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
@@ -33,7 +46,7 @@ if (isset($_SESSION['id_usuario'])) {
 
     <nav class="navbar navbar-davinci efecto-cristal sticky-top shadow-sm">
         <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
-            
+
             <!-- IZQUIERDA: Marca y Logo -->
             <div class="bloque-izquierdo">
                 <a class="navbar-brand marca-davinci text-decoration-none m-0" href="index.php">
@@ -43,15 +56,14 @@ if (isset($_SESSION['id_usuario'])) {
             </div>
 
 <?php
-// Detectamos el id_tipo activo en la URL (0 = Todos)
-$tipoActivo = isset($_GET['tipo']) ? (int)$_GET['tipo'] : 0;
+$tipoActivo = isset($_GET['tipo']) ? (int) $_GET['tipo'] : 0;
 $enInicio = ($paginaActual === 'index.php');
 ?>
 
 <!-- CENTRO: Opciones según el modo -->
 <div class="bloque-central d-none d-lg-flex justify-content-center">
-    <?php if (isset($_SESSION['id_usuario']) && $modoActual === 'anfitrion'): ?>
-        
+    <?php if ($usuarioMenu && $modoActual === 'anfitrion'): ?>
+
         <!-- MODO ANFITRIÓN -->
         <ul class="navbar-nav flex-row gap-2">
             <li class="nav-item">
@@ -102,24 +114,28 @@ $enInicio = ($paginaActual === 'index.php');
 
             <!-- DERECHA: Menú de usuario o Acceso -->
             <div class="bloque-derecho d-flex align-items-center justify-content-end">
-                <?php if (isset($_SESSION['id_usuario'])): ?>
-                    
+                <?php if ($usuarioMenu): ?>
+
                     <div class="dropdown">
-                        <!-- Botón píldora con las 3 rayitas e inicial -->
+                        <!-- Botón píldora con las 3 rayitas y foto o inicial -->
                         <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);"></i>
-                            <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);">
-                                <?= strtoupper(substr($_SESSION['nombre'], 0, 1)) ?>
-                            </div>
+                            <?php if (!empty($usuarioMenu['foto_perfil'])): ?>
+                                <img src="<?= htmlspecialchars($usuarioMenu['foto_perfil']) ?>" alt="Foto de perfil" class="rounded-circle object-fit-cover" width="34" height="34">
+                            <?php else: ?>
+                                <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);">
+                                    <?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioMenu['nombre'], 0, 1))) ?>
+                                </div>
+                            <?php endif; ?>
                         </button>
-                        
+
 <!-- Menú desplegable -->
 <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 rounded-4 p-2 menu-haloja" style="min-width: 245px;">
-    
+
     <!-- Saludo e indicador de modo actual -->
     <li class="px-3 py-2 d-flex align-items-center justify-content-between">
         <span class="fw-bold" style="color: var(--dv-forest-deep);">
-            Hola, <?= htmlspecialchars($_SESSION['nombre']) ?>
+            Hola, <?= htmlspecialchars($usuarioMenu['nombre']) ?>
         </span>
         <span class="badge" style="background-color: var(--dv-forest-soft); color: var(--dv-forest);">
             <?= $modoActual === 'anfitrion' ? 'Anfitrión' : 'Huésped' ?>
@@ -131,6 +147,14 @@ $enInicio = ($paginaActual === 'index.php');
             <i class="bi bi-person fs-5"></i> Mi perfil
         </a>
     </li>
+
+    <?php if (($usuarioMenu['rol'] ?? '') === 'administrador'): ?>
+        <li>
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="admin.php">
+                <i class="bi bi-shield-lock fs-5"></i> Panel Admin
+            </a>
+        </li>
+    <?php endif; ?>
 
     <?php if ($modoActual === 'anfitrion'): ?>
         <!-- En Modo Anfitrión: en PC ya están en el header, así que solo se muestran aquí en celular (d-lg-none) -->
@@ -207,7 +231,7 @@ $enInicio = ($paginaActual === 'index.php');
         </div>
 
         <!-- Barra de categorías solo visible en celulares/tablets (Modo Huésped) -->
-    <?php if (!isset($_SESSION['id_usuario']) || $modoActual !== 'anfitrion'): ?>
+    <?php if (!$usuarioMenu || $modoActual !== 'anfitrion'): ?>
         <div class="d-flex d-lg-none overflow-auto border-top px-3 py-2 gap-2" style="scrollbar-width: none;">
             <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="index.php">
                 <i class="bi bi-grid"></i> Todos

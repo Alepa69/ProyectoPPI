@@ -13,6 +13,8 @@ CREATE TABLE usuarios (
     correo VARCHAR(191) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     telefono VARCHAR(25) NULL,
+    biografia VARCHAR(500) NULL,
+    foto_perfil VARCHAR(255) NULL,
     rol ENUM('usuario','administrador') NOT NULL DEFAULT 'usuario',
     estado ENUM('activo','inactivo') NOT NULL DEFAULT 'activo',
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

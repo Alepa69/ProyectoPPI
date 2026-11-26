@@ -51,14 +51,14 @@ try {
         } elseif ($accion === 'eliminar') {
             $conexion->begin_transaction();
 
-            // 1. Limpiar dependencias de los alojamientos del usuario
+            // 1. Limpiar dependencias de los alojamientos y reservas del usuario
             $consultasHijas = [
                 "DELETE FROM reservas WHERE id_alojamiento IN (SELECT id_alojamiento FROM alojamientos WHERE id_anfitrion = ?)",
                 "DELETE FROM fotos_alojamiento WHERE id_alojamiento IN (SELECT id_alojamiento FROM alojamientos WHERE id_anfitrion = ?)",
                 "DELETE FROM alojamiento_servicio WHERE id_alojamiento IN (SELECT id_alojamiento FROM alojamientos WHERE id_anfitrion = ?)",
                 "DELETE FROM alojamiento_metodo_pago WHERE id_alojamiento IN (SELECT id_alojamiento FROM alojamientos WHERE id_anfitrion = ?)",
                 "DELETE FROM alojamientos WHERE id_anfitrion = ?",
-                "UPDATE reservas SET id_cancelado_por = NULL WHERE id_cancelado_por = ?",
+                "DELETE FROM reservas WHERE id_cancelado_por = ?",
                 "DELETE FROM reservas WHERE id_solicitante = ?",
                 "DELETE FROM usuarios WHERE id_usuario = ?",
             ];
