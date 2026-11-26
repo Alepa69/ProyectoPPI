@@ -193,14 +193,8 @@ include __DIR__ . '/includes/header.php';
                                     <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="btnLimpiarCoords">Limpiar pin</button>
                                 </div>
                                 <div id="mapPublicar" class="border rounded-3 bg-light" style="height: 260px;"></div>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="latitud" class="form-label small text-muted mb-1">Latitud *</label>
-                                <input type="number" step="any" class="form-control form-control-sm" id="latitud" name="latitud" placeholder="Haz clic en el mapa" required>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="longitud" class="form-label small text-muted mb-1">Longitud *</label>
-                                <input type="number" step="any" class="form-control form-control-sm" id="longitud" name="longitud" placeholder="Haz clic en el mapa" required>
+                                <input type="hidden" id="latitud" name="latitud">
+                                <input type="hidden" id="longitud" name="longitud">
                             </div>
                         </div>
                     </section>
@@ -402,7 +396,7 @@ include __DIR__ . '/includes/header.php';
                         <a href="index.php" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Cancelar</a>
                         <div class="ms-auto d-flex gap-2">
                             <button type="button" class="btn btn-dark px-4" id="btnSiguiente">Siguiente →</button>
-                            <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar">🚀 Publicar alojamiento</button>
+                            <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar" disabled>🚀 Publicar alojamiento</button>
                         </div>
                     </div>
                 </form>
@@ -469,6 +463,8 @@ function colocarPin(lat, lng) {
     latInput.value = lat.toFixed(6);
     lngInput.value = lng.toFixed(6);
 }
+
+colocarPin(13.6929403, -89.2181911);
 
 map.on('click', function (e) {
     colocarPin(e.latlng.lat, e.latlng.lng);
@@ -572,7 +568,12 @@ function validarPaso(step) {
     return true;
 }
 
-function mostrarPaso(step) {
+let publishUnlockTimer = null;
+
+function mostrarPaso(step, limpiarAlertas = true) {
+    if (limpiarAlertas) {
+        limpiarAlerta();
+    }
     currentStep = step;
     steps.forEach(function (s) {
         s.classList.toggle('d-none', Number(s.dataset.step) !== step);
@@ -592,6 +593,20 @@ function mostrarPaso(step) {
     btnSiguiente.classList.toggle('d-none', step === totalSteps);
     btnPublicar.classList.toggle('d-none', step !== totalSteps);
 
+    if (publishUnlockTimer) {
+        clearTimeout(publishUnlockTimer);
+        publishUnlockTimer = null;
+    }
+    btnPublicar.disabled = true;
+    if (step === totalSteps) {
+        publishUnlockTimer = setTimeout(function () {
+            publishUnlockTimer = null;
+            if (currentStep === totalSteps) {
+                btnPublicar.disabled = false;
+            }
+        }, 250);
+    }
+
     if (step === 2) {
         setTimeout(function () { map.invalidateSize(); }, 150);
     }
@@ -604,19 +619,48 @@ btnSiguiente.addEventListener('click', function () {
 });
 
 btnAnterior.addEventListener('click', function () {
-    limpiarAlerta();
     if (currentStep > 1) {
         mostrarPaso(currentStep - 1);
     }
 });
 
+form.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    const target = e.target;
+    if (!target || target.tagName !== 'INPUT') return;
+    if (currentStep < totalSteps) {
+        e.preventDefault();
+        if (validarPaso(currentStep)) {
+            mostrarPaso(currentStep + 1);
+        }
+    }
+});
+
 form.addEventListener('submit', function (e) {
+    if (currentStep < totalSteps) {
+        e.preventDefault();
+        if (validarPaso(currentStep)) {
+            mostrarPaso(currentStep + 1);
+        }
+        return;
+    }
+    if (publishUnlockTimer !== null) {
+        e.preventDefault();
+        return;
+    }
+    for (let step = 1; step < totalSteps; step++) {
+        if (!validarPaso(step)) {
+            e.preventDefault();
+            mostrarPaso(step, false);
+            return;
+        }
+    }
     if (!validarPaso(5)) {
         e.preventDefault();
     }
 });
 
-mostrarPaso(1);
+mostrarPaso(1, false);
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
