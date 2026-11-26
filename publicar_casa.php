@@ -1,70 +1,41 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
-
+require_once __DIR__ . '/config/sesion.php';
 require_once __DIR__ . '/config/conexion.php';
 
-$mensajeError = "";
+$mensajeError = $_SESSION['error_publicacion'] ?? '';
+unset($_SESSION['error_publicacion']);
 
-// Tipos de alojamiento: Casa, Apartamento, Habitacion
+// Cargar tipos de alojamiento
 $tipos = [];
-$resultadoTipos = $conexion->query("SELECT id_tipo, nombre FROM tipos_alojamiento ORDER BY id_tipo ASC");
-if ($resultadoTipos && $resultadoTipos->num_rows > 0) {
-    while ($fila = $resultadoTipos->fetch_assoc()) {
-        $tipos[] = $fila;
-    }
-} else {
-    $conexion->query("INSERT INTO tipos_alojamiento (nombre) VALUES ('Casa'), ('Apartamento'), ('Habitacion')");
-    $resultadoTipos = $conexion->query("SELECT id_tipo, nombre FROM tipos_alojamiento ORDER BY id_tipo ASC");
-    if ($resultadoTipos) {
-        while ($fila = $resultadoTipos->fetch_assoc()) {
-            $tipos[] = $fila;
-        }
-    }
+$resTipos = $conexion->query("SELECT id_tipo, nombre FROM tipos_alojamiento ORDER BY id_tipo ASC");
+if ($resTipos) {
+    $tipos = $resTipos->fetch_all(MYSQLI_ASSOC);
 }
 
-// ID de anfitrion: priorizar usuario autenticado en sesion, con respaldo activo
-$id_anfitrion = !empty($_SESSION['id_usuario']) ? (int)$_SESSION['id_usuario'] : null;
-if ($id_anfitrion === null) {
-    $resultadoUsuario = $conexion->query("SELECT id_usuario FROM usuarios WHERE estado = 'activo' LIMIT 1");
-    if ($resultadoUsuario && $filaUsuario = $resultadoUsuario->fetch_assoc()) {
-        $id_anfitrion = (int)$filaUsuario['id_usuario'];
-    } else {
-        $resultadoCualquierUsuario = $conexion->query("SELECT id_usuario FROM usuarios LIMIT 1");
-        if ($resultadoCualquierUsuario && $filaCualquierUsuario = $resultadoCualquierUsuario->fetch_assoc()) {
-            $id_anfitrion = (int)$filaCualquierUsuario['id_usuario'];
-        } else {
-            $conexion->query("INSERT INTO usuarios (nombre, apellido, correo, password_hash, rol, estado) 
-                              VALUES ('Anfitrión', 'Prueba', 'anfitrion@haloja.local', '$2y$10$abcdefghijklmnopqrstuv', 'usuario', 'activo')");
-            $id_anfitrion = (int)$conexion->insert_id;
-        }
-    }
-}
-
-// Controlador POST modularizado
-require_once __DIR__ . '/procesar_publicacion.php';
-if ($mensajeError === '' && !empty($_SESSION['error_publicacion'])) {
-    $mensajeError = (string)$_SESSION['error_publicacion'];
-    unset($_SESSION['error_publicacion']);
-}
-
-// Cargar amenidades dinamicamente agrupadas por categoria
+// Cargar amenidades agrupadas por categoría
 $amenidadesPorCategoria = [];
-try {
-    $resAmenidades = $conexion->query("SELECT id, nombre, categoria, icono FROM amenidades ORDER BY categoria ASC, id ASC");
-    if ($resAmenidades) {
-        while ($am = $resAmenidades->fetch_assoc()) {
-            $amenidadesPorCategoria[$am['categoria']][] = $am;
-        }
+$resAmenidades = $conexion->query("SELECT id, nombre, categoria FROM amenidades ORDER BY categoria ASC, id ASC");
+if ($resAmenidades) {
+    while ($am = $resAmenidades->fetch_assoc()) {
+        $amenidadesPorCategoria[$am['categoria']][] = $am;
     }
-} catch (Throwable $e) {
-    $amenidadesPorCategoria = [];
 }
 
-$tituloPagina = 'Publicar alojamiento';
-$pageTitle = $tituloPagina;
+// Cargar métodos de pago informativos
+$metodosPago = [];
+$resMetodos = $conexion->query("SELECT id_metodo_pago, nombre FROM metodos_pago ORDER BY id_metodo_pago ASC");
+if ($resMetodos) {
+    $metodosPago = $resMetodos->fetch_all(MYSQLI_ASSOC);
+}
 
+$departamentosSV = [
+    'Ahuachapán', 'Cabañas', 'Chalatenango', 'Cuscatlán',
+    'La Libertad', 'La Paz', 'La Unión', 'Morazán',
+    'San Miguel', 'San Salvador', 'San Vicente', 'Santa Ana',
+    'Sonsonate', 'Usulután'
+];
+
+$pageTitle = 'Publicar alojamiento';
 include __DIR__ . '/includes/header.php';
 ?>
 
@@ -75,16 +46,14 @@ include __DIR__ . '/includes/header.php';
     .wizard-step-badge {
         width: 28px; height: 28px; font-size: .8rem; font-weight: 700;
         display: inline-flex; align-items: center; justify-content: center;
-        border-radius: 50%; background: #e9ecef; color: #495057; transition: all .2s;
+        border-radius: 50%; background: #e9ecef; color: #495057;
     }
     .wizard-step-label.active .wizard-step-badge { background: #212529; color: #fff; }
     .wizard-step-label.done .wizard-step-badge { background: #198754; color: #fff; }
     .wizard-step-label.active { color: #212529; font-weight: 600; }
     .choice-card {
         cursor: pointer; border: 2px solid #dee2e6; border-radius: .75rem;
-        transition: border-color .15s, background-color .15s;
     }
-    .choice-card:hover { border-color: #adb5bd; }
     .btn-check:checked + .choice-card {
         border-color: #212529; background-color: #f8f9fa; box-shadow: 0 0 0 1px #212529;
     }
@@ -97,18 +66,10 @@ include __DIR__ . '/includes/header.php';
     .counter-val { min-width: 2.5rem; text-align: center; font-weight: 600; font-size: 1.05rem; }
     .amenity-tile {
         cursor: pointer; border: 1.5px solid #dee2e6; border-radius: .65rem;
-        padding: .65rem .85rem; transition: all .15s; user-select: none;
+        padding: .65rem .85rem; user-select: none;
     }
-    .amenity-tile:hover { border-color: #6c757d; }
     .btn-check:checked + .amenity-tile {
         border-color: #212529; background-color: #f1f3f5; font-weight: 600;
-    }
-    .preview-card { position: relative; border-radius: .75rem; overflow: hidden; border: 2px solid #dee2e6; }
-    .preview-card.is-cover { border-color: #198754; }
-    .preview-card img { width: 100%; height: 140px; object-fit: cover; display: block; }
-    .preview-remove {
-        position: absolute; top: 6px; right: 6px; width: 26px; height: 26px;
-        border-radius: 50%; padding: 0; line-height: 1; font-weight: 700;
     }
 </style>
 
@@ -121,9 +82,9 @@ include __DIR__ . '/includes/header.php';
                     <span class="badge text-bg-dark" id="stepCounterText">Paso 1 de 5</span>
                 </div>
                 <div class="progress mb-3" style="height: 6px;">
-                    <div class="progress-bar bg-dark" id="wizardProgressBar" role="progressbar" style="width: 20%;" aria-valuenow="20" aria-valuemin="0" aria-valuemax="100"></div>
+                    <div class="progress-bar bg-dark" id="wizardProgressBar" style="width: 20%;"></div>
                 </div>
-                <div class="d-flex justify-content-between small text-muted flex-wrap gap-2" id="wizardStepLabels">
+                <div class="d-flex justify-content-between small text-muted flex-wrap gap-2">
                     <span class="wizard-step-label active" data-step-indicator="1"><span class="wizard-step-badge me-1">1</span> Esenciales</span>
                     <span class="wizard-step-label" data-step-indicator="2"><span class="wizard-step-badge me-1">2</span> Ubicación</span>
                     <span class="wizard-step-label" data-step-indicator="3"><span class="wizard-step-badge me-1">3</span> Espacios</span>
@@ -137,7 +98,8 @@ include __DIR__ . '/includes/header.php';
                     <?= htmlspecialchars($mensajeError) ?>
                 </div>
 
-                <form id="wizardForm" method="POST" action="procesar_publicacion.php" enctype="multipart/form-data" novalidate>
+                <form id="wizardForm" method="POST" action="procesar_publicacion.php" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
 
                     <!-- PASO 1: Esenciales -->
                     <section class="wizard-step" data-step="1">
@@ -155,7 +117,7 @@ include __DIR__ . '/includes/header.php';
                             <select class="form-select" id="id_tipo" name="id_tipo" required>
                                 <option value="" disabled selected>Selecciona un tipo...</option>
                                 <?php foreach ($tipos as $tipo): ?>
-                                    <option value="<?= (int)$tipo['id_tipo'] ?>"><?= htmlspecialchars($tipo['nombre']) ?></option>
+                                    <option value="<?= (int) $tipo['id_tipo'] ?>"><?= htmlspecialchars($tipo['nombre']) ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -197,13 +159,17 @@ include __DIR__ . '/includes/header.php';
                     <!-- PASO 2: Ubicación -->
                     <section class="wizard-step d-none" data-step="2">
                         <h2 class="h5 fw-bold mb-1">¿Dónde está ubicado?</h2>
-                        <p class="text-muted small mb-4">Indica la dirección y, opcionalmente, ajusta el pin exacto en el mapa.</p>
+                        <p class="text-muted small mb-4">Indica la dirección y haz clic en el mapa para ubicar tu alojamiento.</p>
 
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="departamento" class="form-label fw-semibold">Departamento <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="departamento" name="departamento" maxlength="100"
-                                       placeholder="Ej: La Libertad" required>
+                                <select class="form-select" id="departamento" name="departamento" required>
+                                    <option value="" disabled selected>Selecciona un departamento...</option>
+                                    <?php foreach ($departamentosSV as $dep): ?>
+                                        <option value="<?= htmlspecialchars($dep) ?>"><?= htmlspecialchars($dep) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label for="ciudad" class="form-label fw-semibold">Ciudad / Municipio <span class="text-danger">*</span></label>
@@ -223,10 +189,10 @@ include __DIR__ . '/includes/header.php';
                             </div>
                             <div class="col-12">
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <label class="form-label fw-semibold mb-0">Pin en mapa <small class="text-muted fw-normal">(Opcional — clic para ubicar)</small></label>
-                                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="btnLimpiarCoords">Limpiar coordenadas</button>
+                                    <label class="form-label fw-semibold mb-0">Pin en mapa <span class="text-danger">*</span> <small class="text-muted fw-normal">(Haz clic para colocar el pin)</small></label>
+                                    <button type="button" class="btn btn-link btn-sm text-decoration-none p-0" id="btnLimpiarCoords">Limpiar pin</button>
                                 </div>
-                                <div id="mapPublicar" class="border rounded-3 bg-light" style="height: 250px;"></div>
+                                <div id="mapPublicar" class="border rounded-3 bg-light" style="height: 260px;"></div>
                                 <input type="hidden" id="latitud" name="latitud">
                                 <input type="hidden" id="longitud" name="longitud">
                             </div>
@@ -306,8 +272,8 @@ include __DIR__ . '/includes/header.php';
                                         <?php foreach ($items as $am): ?>
                                             <div class="col-6 col-md-4">
                                                 <input type="checkbox" class="btn-check" name="amenidades[]"
-                                                       id="am_<?= (int)$am['id'] ?>" value="<?= (int)$am['id'] ?>">
-                                                <label class="amenity-tile w-100 h-100 d-flex align-items-center gap-2 small" for="am_<?= (int)$am['id'] ?>">
+                                                       id="am_<?= (int) $am['id'] ?>" value="<?= (int) $am['id'] ?>">
+                                                <label class="amenity-tile w-100 h-100 d-flex align-items-center gap-2 small" for="am_<?= (int) $am['id'] ?>">
                                                     <span>✓</span>
                                                     <span><?= htmlspecialchars($am['nombre']) ?></span>
                                                 </label>
@@ -316,8 +282,6 @@ include __DIR__ . '/includes/header.php';
                                     </div>
                                 </div>
                             <?php endforeach; ?>
-                        <?php else: ?>
-                            <div class="alert alert-warning small">No hay amenidades cargadas aún en el catálogo.</div>
                         <?php endif; ?>
 
                         <hr class="my-4">
@@ -365,38 +329,33 @@ include __DIR__ . '/includes/header.php';
                         </div>
                     </section>
 
-                    <!-- PASO 5: Imágenes y tarifas -->
+                    <!-- PASO 5: Imágenes, tarifas y métodos de pago -->
                     <section class="wizard-step d-none" data-step="5">
-                        <h2 class="h5 fw-bold mb-1">Fotos y tarifas</h2>
-                        <p class="text-muted small mb-4">Agrega al menos 1 foto (por URL o archivo), elige tu foto de portada y fija el precio.</p>
+                        <h2 class="h5 fw-bold mb-1">Fotos, tarifa y métodos de pago</h2>
+                        <p class="text-muted small mb-4">Agrega al menos 1 foto (máximo 8), define la tarifa y elige cómo aceptas el pago.</p>
 
                         <div class="card bg-light border-0 p-3 mb-3">
-                            <div class="row g-2 align-items-end mb-2">
-                                <div class="col-md-9">
-                                    <label for="nuevaUrlInput" class="form-label small fw-semibold mb-1">Agregar imagen por URL (recomendado)</label>
-                                    <input type="url" class="form-control" id="nuevaUrlInput" placeholder="https://ejemplo.com/foto-casa.jpg">
-                                </div>
-                                <div class="col-md-3 d-grid">
-                                    <button type="button" class="btn btn-outline-dark" id="btnAgregarUrl">+ Agregar URL</button>
-                                </div>
-                            </div>
-
-                            <div class="mt-2">
-                                <label for="inputImagenesFiles" class="form-label small fw-semibold mb-1">O subir imágenes desde tu dispositivo (JPG, PNG, WEBP — máx. 5 MB)</label>
+                            <div class="mb-3">
+                                <label for="inputImagenesFiles" class="form-label small fw-semibold">Subir imágenes desde tu dispositivo (JPG, PNG, WEBP — máx. 5 MB cada una)</label>
                                 <input type="file" class="form-control" id="inputImagenesFiles" name="imagenes[]" accept="image/jpeg,image/png,image/webp" multiple>
                             </div>
 
-                            <div id="urlsHiddenContainer"></div>
-                            <input type="hidden" name="imagen_portada" id="imagenPortadaIndex" value="0">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <label class="form-label small fw-semibold mb-0">O agregar enlaces (URLs) de imágenes</label>
+                                    <button type="button" class="btn btn-outline-dark btn-sm" id="btnAgregarUrl">+ Otra URL</button>
+                                </div>
+                                <div id="listaUrls" class="d-flex flex-column gap-2">
+                                    <input type="url" class="form-control" name="imagenes_url[]" placeholder="https://ejemplo.com/foto-casa.jpg">
+                                </div>
+                            </div>
                         </div>
-
-                        <div class="row g-3 mb-4" id="galeriaPreview"></div>
 
                         <hr class="my-3">
 
-                        <div class="row g-3">
+                        <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <label for="precio_noche" class="form-label fw-semibold">Precio por noche (USD $) <span class="text-danger">*</span></label>
+                                <label for="precio_noche" class="form-label fw-semibold">Precio por persona / noche (USD $) <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="precio_noche" name="precio_noche" step="0.01" min="0.01" placeholder="45.00" required>
@@ -408,6 +367,25 @@ include __DIR__ . '/includes/header.php';
                                     <span class="input-group-text">$</span>
                                     <input type="number" class="form-control" id="tarifa_limpieza" name="tarifa_limpieza" step="0.01" min="0" value="0.00">
                                 </div>
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="form-label fw-semibold d-block">Métodos de pago informativos aceptados <span class="text-danger">*</span></label>
+                            <small class="text-muted d-block mb-2">El pago se coordina directamente con el huésped; la plataforma no procesa cobros en línea.</small>
+                            <div class="row g-2">
+                                <?php foreach ($metodosPago as $mp): ?>
+                                    <div class="col-md-6">
+                                        <div class="form-check border rounded p-2 ps-4">
+                                            <input class="form-check-input metodo-pago-check" type="checkbox"
+                                                   name="metodos_pago[]" value="<?= (int) $mp['id_metodo_pago'] ?>"
+                                                   id="mp_<?= (int) $mp['id_metodo_pago'] ?>">
+                                            <label class="form-check-label fw-semibold" for="mp_<?= (int) $mp['id_metodo_pago'] ?>">
+                                                <?= htmlspecialchars($mp['nombre']) ?>
+                                            </label>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
                             </div>
                         </div>
                     </section>
@@ -429,416 +407,260 @@ include __DIR__ . '/includes/header.php';
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-(() => {
-    const form = document.getElementById('wizardForm');
-    const steps = Array.from(document.querySelectorAll('.wizard-step'));
-    const indicators = Array.from(document.querySelectorAll('[data-step-indicator]'));
-    const progressBar = document.getElementById('wizardProgressBar');
-    const stepCounterText = document.getElementById('stepCounterText');
-    const alertBox = document.getElementById('wizardAlertBox');
+const form = document.getElementById('wizardForm');
+const steps = document.querySelectorAll('.wizard-step');
+const indicators = document.querySelectorAll('[data-step-indicator]');
+const progressBar = document.getElementById('wizardProgressBar');
+const stepCounterText = document.getElementById('stepCounterText');
+const alertBox = document.getElementById('wizardAlertBox');
 
-    const btnAnterior = document.getElementById('btnAnterior');
-    const btnCancelar = document.getElementById('btnCancelar');
-    const btnSiguiente = document.getElementById('btnSiguiente');
-    const btnPublicar = document.getElementById('btnPublicar');
+const btnAnterior = document.getElementById('btnAnterior');
+const btnCancelar = document.getElementById('btnCancelar');
+const btnSiguiente = document.getElementById('btnSiguiente');
+const btnPublicar = document.getElementById('btnPublicar');
 
-    let currentStep = 1;
-    const totalSteps = steps.length;
+let currentStep = 1;
+const totalSteps = steps.length;
 
-    const showAlert = (msg) => {
-        alertBox.textContent = msg;
-        alertBox.classList.remove('d-none');
-        alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    };
-    const clearAlert = () => {
-        alertBox.classList.add('d-none');
-        alertBox.textContent = '';
-    };
+function mostrarAlerta(msg) {
+    alertBox.textContent = msg;
+    alertBox.classList.remove('d-none');
+    alertBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
 
-    // --- Sincronizar ciudad -> municipio ---
-    const ciudadInput = document.getElementById('ciudad');
-    const municipioHidden = document.getElementById('municipio');
-    ciudadInput.addEventListener('input', () => { municipioHidden.value = ciudadInput.value; });
+function limpiarAlerta() {
+    alertBox.classList.add('d-none');
+    alertBox.textContent = '';
+}
 
-    // --- Mapa Leaflet en Paso 2 ---
-    const latInput = document.getElementById('latitud');
-    const lngInput = document.getElementById('longitud');
-    const map = L.map('mapPublicar').setView([13.6929403, -89.2181911], 11);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
-    }).addTo(map);
-    let marker = null;
+// Sincronizar ciudad hacia campo oculto municipio
+const ciudadInput = document.getElementById('ciudad');
+const municipioHidden = document.getElementById('municipio');
+ciudadInput.addEventListener('input', function () {
+    municipioHidden.value = ciudadInput.value;
+});
 
-    const setPin = (lat, lng, updateInputs = true) => {
-        if (marker) {
-            marker.setLatLng([lat, lng]);
-        } else {
-            marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            marker.on('dragend', () => {
-                const p = marker.getLatLng();
-                latInput.value = p.lat.toFixed(6);
-                lngInput.value = p.lng.toFixed(6);
-            });
-        }
-        if (updateInputs) {
-            latInput.value = lat.toFixed(6);
-            lngInput.value = lng.toFixed(6);
-        }
-    };
+// Mapa Leaflet para elegir coordenadas
+const latInput = document.getElementById('latitud');
+const lngInput = document.getElementById('longitud');
+const map = L.map('mapPublicar').setView([13.6929403, -89.2181911], 11);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap'
+}).addTo(map);
+let marker = null;
 
-    setPin(13.6929403, -89.2181911);
+function colocarPin(lat, lng) {
+    if (marker) {
+        marker.setLatLng([lat, lng]);
+    } else {
+        marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+        marker.on('dragend', function () {
+            const p = marker.getLatLng();
+            latInput.value = p.lat.toFixed(6);
+            lngInput.value = p.lng.toFixed(6);
+        });
+    }
+    latInput.value = lat.toFixed(6);
+    lngInput.value = lng.toFixed(6);
+}
 
-    map.on('click', (e) => setPin(e.latlng.lat, e.latlng.lng));
-    document.getElementById('btnLimpiarCoords').addEventListener('click', () => {
-        latInput.value = '';
-        lngInput.value = '';
-        if (marker) { map.removeLayer(marker); marker = null; }
-    });
+colocarPin(13.6929403, -89.2181911);
 
-    // --- Contadores +/- (Paso 3) ---
-    const updateCounterButtons = (input) => {
+map.on('click', function (e) {
+    colocarPin(e.latlng.lat, e.latlng.lng);
+});
+
+document.getElementById('btnLimpiarCoords').addEventListener('click', function () {
+    latInput.value = '';
+    lngInput.value = '';
+    if (marker) {
+        map.removeLayer(marker);
+        marker = null;
+    }
+});
+
+// Contadores +/- del Paso 3
+document.querySelectorAll('.counter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        const input = document.getElementById(btn.dataset.target);
         const min = parseFloat(input.dataset.min);
         const max = parseFloat(input.dataset.max);
-        const val = parseFloat(input.value);
-        const target = input.id;
-        const disp = document.getElementById('disp_' + target);
-        disp.textContent = input.dataset.step === '0.5' ? val.toFixed(1) : String(Math.round(val));
-        document.querySelectorAll(`.counter-btn[data-target="${target}"]`).forEach(btn => {
-            const d = parseFloat(btn.dataset.delta);
-            btn.disabled = (d < 0 && val <= min) || (d > 0 && val >= max);
-        });
-    };
+        const delta = parseFloat(btn.dataset.delta);
+        const step = input.dataset.step;
+        let next = parseFloat(input.value) + delta;
+        if (next < min) next = min;
+        if (next > max) next = max;
 
-    document.querySelectorAll('.counter-btn').forEach(btn => {
-        const input = document.getElementById(btn.dataset.target);
-        updateCounterButtons(input);
-        btn.addEventListener('click', () => {
-            const min = parseFloat(input.dataset.min);
-            const max = parseFloat(input.dataset.max);
-            const delta = parseFloat(btn.dataset.delta);
-            const next = Math.min(max, Math.max(min, parseFloat(input.value) + delta));
-            input.value = input.dataset.step === '0.5' ? next.toFixed(1) : String(Math.round(next));
-            updateCounterButtons(input);
-        });
+        input.value = step === '0.5' ? next.toFixed(1) : String(Math.round(next));
+        document.getElementById('disp_' + input.id).textContent = input.value;
+    });
+});
+
+// Agregar otro campo de URL de imagen
+document.getElementById('btnAgregarUrl').addEventListener('click', function () {
+    const lista = document.getElementById('listaUrls');
+    if (lista.children.length >= 8) {
+        mostrarAlerta('Puedes agregar máximo 8 imágenes.');
+        return;
+    }
+    const input = document.createElement('input');
+    input.type = 'url';
+    input.name = 'imagenes_url[]';
+    input.className = 'form-control';
+    input.placeholder = 'https://ejemplo.com/otra-foto.jpg';
+    lista.appendChild(input);
+});
+
+// Validación por paso
+function validarPaso(step) {
+    limpiarAlerta();
+
+    if (step === 1) {
+        if (!document.getElementById('titulo').value.trim()) {
+            mostrarAlerta('Ingresa un título para tu alojamiento.'); return false;
+        }
+        if (!document.getElementById('id_tipo').value) {
+            mostrarAlerta('Selecciona un tipo de propiedad.'); return false;
+        }
+        if (!document.getElementById('descripcion').value.trim()) {
+            mostrarAlerta('Ingresa una descripción para tu alojamiento.'); return false;
+        }
+    } else if (step === 2) {
+        if (!document.getElementById('departamento').value.trim() || !ciudadInput.value.trim()) {
+            mostrarAlerta('El departamento y la ciudad/municipio son obligatorios.'); return false;
+        }
+        if (!document.getElementById('direccion').value.trim()) {
+            mostrarAlerta('La dirección exacta es obligatoria.'); return false;
+        }
+        const lat = latInput.value.trim();
+        const lng = lngInput.value.trim();
+        if (lat === '' || lng === '' || isNaN(lat) || isNaN(lng)) {
+            mostrarAlerta('Haz clic en el mapa para marcar la ubicación de tu alojamiento.'); return false;
+        }
+        municipioHidden.value = ciudadInput.value.trim();
+    } else if (step === 4) {
+        if (!document.getElementById('hora_checkin').value || !document.getElementById('hora_checkout').value) {
+            mostrarAlerta('Define los horarios de check-in y check-out.'); return false;
+        }
+    } else if (step === 5) {
+        const archivos = document.getElementById('inputImagenesFiles').files.length;
+        const urls = Array.from(document.querySelectorAll('input[name="imagenes_url[]"]'))
+            .filter(inp => inp.value.trim() !== '').length;
+
+        if (archivos + urls < 1) {
+            mostrarAlerta('Agrega al menos 1 imagen (archivo o URL).'); return false;
+        }
+        if (archivos + urls > 8) {
+            mostrarAlerta('Puedes agregar un máximo de 8 imágenes.'); return false;
+        }
+
+        const precio = parseFloat(document.getElementById('precio_noche').value);
+        if (isNaN(precio) || precio <= 0) {
+            mostrarAlerta('El precio por persona/noche debe ser mayor a $0.'); return false;
+        }
+
+        const metodosMarcados = document.querySelectorAll('.metodo-pago-check:checked').length;
+        if (metodosMarcados < 1) {
+            mostrarAlerta('Selecciona al menos un método de pago informativo.'); return false;
+        }
+    }
+
+    return true;
+}
+
+let publishUnlockTimer = null;
+
+function mostrarPaso(step, limpiarAlertas = true) {
+    if (limpiarAlertas) {
+        limpiarAlerta();
+    }
+    currentStep = step;
+    steps.forEach(function (s) {
+        s.classList.toggle('d-none', Number(s.dataset.step) !== step);
+    });
+    indicators.forEach(function (ind) {
+        const n = Number(ind.dataset.stepIndicator);
+        ind.classList.toggle('active', n === step);
+        ind.classList.toggle('done', n < step);
     });
 
-    // --- Gestor de múltiples imágenes (Paso 5) ---
-    let urlItems = [];
-    let fileItems = [];
-    let coverKey = null;
-    let uidSeq = 1;
+    const pct = Math.round((step / totalSteps) * 100);
+    progressBar.style.width = pct + '%';
+    stepCounterText.textContent = 'Paso ' + step + ' de ' + totalSteps;
 
-    const urlInput = document.getElementById('nuevaUrlInput');
-    const fileInput = document.getElementById('inputImagenesFiles');
-    const urlsContainer = document.getElementById('urlsHiddenContainer');
-    const coverIndexInput = document.getElementById('imagenPortadaIndex');
-    const gallery = document.getElementById('galeriaPreview');
+    btnAnterior.classList.toggle('d-none', step === 1);
+    btnCancelar.classList.toggle('d-none', step > 1);
+    btnSiguiente.classList.toggle('d-none', step === totalSteps);
+    btnPublicar.classList.toggle('d-none', step !== totalSteps);
 
-    const isValidHttpUrl = (str) => {
-        try {
-            const u = new URL(str);
-            return u.protocol === 'http:' || u.protocol === 'https:';
-        } catch {
-            return false;
-        }
-    };
-
-    const syncImagesStateAndRender = () => {
-        const ordered = [...urlItems, ...fileItems];
-        if (ordered.length === 0) {
-            coverKey = null;
-        } else if (!ordered.some(item => item.key === coverKey)) {
-            coverKey = ordered[0].key;
-        }
-
-        // Hidden inputs para URLs en orden exacto
-        urlsContainer.innerHTML = '';
-        urlItems.forEach(item => {
-            const hidden = document.createElement('input');
-            hidden.type = 'hidden';
-            hidden.name = 'imagenes_url[]';
-            hidden.value = item.src;
-            urlsContainer.appendChild(hidden);
-        });
-
-        // FileList sincronizado via DataTransfer en orden exacto
-        const dt = new DataTransfer();
-        fileItems.forEach(item => dt.items.add(item.file));
-        fileInput.files = dt.files;
-
-        // Indice de portada relativo a [...urlItems, ...fileItems]
-        const coverIdx = Math.max(0, ordered.findIndex(item => item.key === coverKey));
-        coverIndexInput.value = String(coverIdx);
-
-        // Render de galería
-        gallery.innerHTML = '';
-        ordered.forEach((item, index) => {
-            const isCover = item.key === coverKey;
-            const col = document.createElement('div');
-            col.className = 'col-6 col-md-4';
-
-            const card = document.createElement('div');
-            card.className = `preview-card bg-white ${isCover ? 'is-cover' : ''}`;
-
-            const img = document.createElement('img');
-            img.src = item.src;
-            img.alt = `Imagen ${index + 1}`;
-            img.onerror = () => { img.src = 'https://picsum.photos/seed/error/300/200'; };
-
-            const btnRemove = document.createElement('button');
-            btnRemove.type = 'button';
-            btnRemove.className = 'btn btn-danger btn-sm preview-remove';
-            btnRemove.textContent = '×';
-            btnRemove.title = 'Eliminar imagen';
-            btnRemove.addEventListener('click', () => {
-                if (item.kind === 'url') {
-                    urlItems = urlItems.filter(x => x.key !== item.key);
-                } else {
-                    URL.revokeObjectURL(item.src);
-                    fileItems = fileItems.filter(x => x.key !== item.key);
-                }
-                syncImagesStateAndRender();
-            });
-
-            const footer = document.createElement('div');
-            footer.className = 'p-2 d-flex justify-content-between align-items-center gap-1';
-
-            if (isCover) {
-                const badge = document.createElement('span');
-                badge.className = 'badge text-bg-success';
-                badge.textContent = '★ Portada';
-                footer.appendChild(badge);
-            } else {
-                const btnCover = document.createElement('button');
-                btnCover.type = 'button';
-                btnCover.className = 'btn btn-outline-dark btn-sm py-0 px-2';
-                btnCover.textContent = 'Usar portada';
-                btnCover.addEventListener('click', () => {
-                    coverKey = item.key;
-                    syncImagesStateAndRender();
-                });
-                footer.appendChild(btnCover);
-            }
-
-            const orderTag = document.createElement('small');
-            orderTag.className = 'text-muted';
-            orderTag.textContent = `#${index + 1}`;
-            footer.appendChild(orderTag);
-
-            card.append(img, btnRemove, footer);
-            col.appendChild(card);
-            gallery.appendChild(col);
-        });
-    };
-
-    const addUrlFromInput = () => {
-        const val = urlInput.value.trim();
-        if (!val) return true;
-        if (!isValidHttpUrl(val)) {
-            showAlert('Ingresa una URL de imagen válida que inicie con http:// o https://.');
-            return false;
-        }
-        urlItems.push({ key: 'u_' + (uidSeq++), kind: 'url', src: val });
-        urlInput.value = '';
-        clearAlert();
-        syncImagesStateAndRender();
-        return true;
-    };
-
-    document.getElementById('btnAgregarUrl').addEventListener('click', addUrlFromInput);
-    urlInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') { e.preventDefault(); addUrlFromInput(); }
-    });
-
-    fileInput.addEventListener('change', (e) => {
-        const allowed = ['image/jpeg', 'image/png', 'image/webp'];
-        const maxSize = 5 * 1024 * 1024;
-        for (const f of Array.from(e.target.files)) {
-            if (!allowed.includes(f.type)) {
-                showAlert(`Formato no permitido en ${f.name}. Usa JPG, PNG o WEBP.`);
-                continue;
-            }
-            if (f.size > maxSize) {
-                showAlert(`El archivo ${f.name} supera los 5 MB.`);
-                continue;
-            }
-            fileItems.push({ key: 'f_' + (uidSeq++), kind: 'file', file: f, src: URL.createObjectURL(f) });
-        }
-        syncImagesStateAndRender();
-    });
-
-    // --- Navegación y validación por paso ---
-    const validateStep = (step) => {
-        clearAlert();
-        if (step === 1) {
-            if (!document.getElementById('titulo').value.trim()) {
-                showAlert('Ingresa un título para tu alojamiento.'); return false;
-            }
-            if (!document.getElementById('id_tipo').value) {
-                showAlert('Selecciona un tipo de propiedad.'); return false;
-            }
-            if (!document.getElementById('descripcion').value.trim()) {
-                showAlert('Ingresa una descripción para tu alojamiento.'); return false;
-            }
-        } else if (step === 2) {
-            if (!document.getElementById('departamento').value.trim() || !ciudadInput.value.trim()) {
-                showAlert('El departamento y la ciudad/municipio son obligatorios.'); return false;
-            }
-            if (!document.getElementById('direccion').value.trim()) {
-                showAlert('La dirección exacta es obligatoria.'); return false;
-            }
-            const lat = latInput.value.trim();
-            const lng = lngInput.value.trim();
-            if (lat !== '' && (isNaN(lat) || Number(lat) < -90 || Number(lat) > 90)) {
-                showAlert('La latitud debe estar entre -90 y 90.'); return false;
-            }
-            if (lng !== '' && (isNaN(lng) || Number(lng) < -180 || Number(lng) > 180)) {
-                showAlert('La longitud debe estar entre -180 y 180.'); return false;
-            }
-            municipioHidden.value = ciudadInput.value.trim();
-        } else if (step === 3) {
-            if (parseInt(document.getElementById('capacidad_personas').value, 10) < 1) {
-                showAlert('La capacidad debe ser de al menos 1 persona.'); return false;
-            }
-            if (parseInt(document.getElementById('num_camas').value, 10) < 1) {
-                showAlert('Debe haber al menos 1 cama.'); return false;
-            }
-            if (parseFloat(document.getElementById('num_banos').value) < 0.5) {
-                showAlert('Debe haber al menos 0.5 baños.'); return false;
-            }
-        } else if (step === 4) {
-            if (!document.getElementById('hora_checkin').value || !document.getElementById('hora_checkout').value) {
-                showAlert('Define los horarios de check-in y check-out.'); return false;
-            }
-            if (parseInt(document.getElementById('estancia_minima').value, 10) < 1) {
-                showAlert('La estancia mínima debe ser de al menos 1 noche.'); return false;
-            }
-        } else if (step === 5) {
-            if (urlInput.value.trim() !== '' && !addUrlFromInput()) {
-                return false;
-            }
-            if (urlItems.length + fileItems.length < 1) {
-                showAlert('Agrega al menos 1 imagen del alojamiento (URL o archivo).'); return false;
-            }
-            const precio = parseFloat(document.getElementById('precio_noche').value);
-            const limpieza = parseFloat(document.getElementById('tarifa_limpieza').value || '0');
-            if (isNaN(precio) || precio <= 0) {
-                showAlert('El precio por noche debe ser mayor a $0.'); return false;
-            }
-            if (isNaN(limpieza) || limpieza < 0) {
-                showAlert('La tarifa de limpieza no puede ser negativa.'); return false;
-            }
-        }
-        return true;
-    };
-
-    let publishUnlockTimer = null;
-
-    const renderStep = (step, shouldClearAlert = true) => {
-        if (shouldClearAlert) {
-            clearAlert();
-        }
-        currentStep = step;
-        steps.forEach(s => s.classList.toggle('d-none', Number(s.dataset.step) !== step));
-        indicators.forEach(ind => {
-            const n = Number(ind.dataset.stepIndicator);
-            ind.classList.toggle('active', n === step);
-            ind.classList.toggle('done', n < step);
-        });
-
-        const pct = Math.round((step / totalSteps) * 100);
-        progressBar.style.width = pct + '%';
-        progressBar.setAttribute('aria-valuenow', String(pct));
-        stepCounterText.textContent = `Paso ${step} de ${totalSteps}`;
-
-        btnAnterior.classList.toggle('d-none', step === 1);
-        btnCancelar.classList.toggle('d-none', step > 1);
-        btnSiguiente.classList.toggle('d-none', step === totalSteps);
-        btnPublicar.classList.toggle('d-none', step !== totalSteps);
-
-        if (publishUnlockTimer) {
-            clearTimeout(publishUnlockTimer);
+    if (publishUnlockTimer) {
+        clearTimeout(publishUnlockTimer);
+        publishUnlockTimer = null;
+    }
+    btnPublicar.disabled = true;
+    if (step === totalSteps) {
+        publishUnlockTimer = setTimeout(function () {
             publishUnlockTimer = null;
-        }
-        btnPublicar.disabled = true;
-        if (step === totalSteps) {
-            publishUnlockTimer = setTimeout(() => {
-                publishUnlockTimer = null;
-                if (currentStep === totalSteps) {
-                    btnPublicar.disabled = false;
-                }
-            }, 250);
-        }
-
-        if (step === 2) {
-            setTimeout(() => map.invalidateSize(), 150);
-        }
-    };
-
-    btnSiguiente.addEventListener('click', () => {
-        if (validateStep(currentStep) && currentStep < totalSteps) {
-            renderStep(currentStep + 1);
-        }
-    });
-
-    btnAnterior.addEventListener('click', () => {
-        if (currentStep > 1) renderStep(currentStep - 1);
-    });
-
-    form.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter') return;
-        const target = e.target;
-        if (!target || target.tagName !== 'INPUT' || target.id === 'nuevaUrlInput') return;
-        if (currentStep < totalSteps) {
-            e.preventDefault();
-            if (validateStep(currentStep)) {
-                renderStep(currentStep + 1);
+            if (currentStep === totalSteps) {
+                btnPublicar.disabled = false;
             }
-        }
-    });
+        }, 250);
+    }
 
-    // Envío asíncrono con JSON para conservar datos si hay error del servidor
-    form.addEventListener('submit', async (e) => {
+    if (step === 2) {
+        setTimeout(function () { map.invalidateSize(); }, 150);
+    }
+}
+
+btnSiguiente.addEventListener('click', function () {
+    if (validarPaso(currentStep) && currentStep < totalSteps) {
+        mostrarPaso(currentStep + 1);
+    }
+});
+
+btnAnterior.addEventListener('click', function () {
+    if (currentStep > 1) {
+        mostrarPaso(currentStep - 1);
+    }
+});
+
+form.addEventListener('keydown', function (e) {
+    if (e.key !== 'Enter') return;
+    const target = e.target;
+    if (!target || target.tagName !== 'INPUT') return;
+    if (currentStep < totalSteps) {
         e.preventDefault();
-        if (currentStep < totalSteps) {
-            if (validateStep(currentStep)) {
-                renderStep(currentStep + 1);
-            }
+        if (validarPaso(currentStep)) {
+            mostrarPaso(currentStep + 1);
+        }
+    }
+});
+
+form.addEventListener('submit', function (e) {
+    if (currentStep < totalSteps) {
+        e.preventDefault();
+        if (validarPaso(currentStep)) {
+            mostrarPaso(currentStep + 1);
+        }
+        return;
+    }
+    if (publishUnlockTimer !== null) {
+        e.preventDefault();
+        return;
+    }
+    for (let step = 1; step < totalSteps; step++) {
+        if (!validarPaso(step)) {
+            e.preventDefault();
+            mostrarPaso(step, false);
             return;
         }
-        for (let step = 1; step < totalSteps; step++) {
-            if (!validateStep(step)) {
-                renderStep(step, false);
-                return;
-            }
-        }
-        if (!validateStep(5)) return;
-        syncImagesStateAndRender();
+    }
+    if (!validarPaso(5)) {
+        e.preventDefault();
+    }
+});
 
-        btnPublicar.disabled = true;
-        btnPublicar.textContent = 'Publicando...';
-        try {
-            const resp = await fetch(form.action, {
-                method: 'POST',
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: new FormData(form)
-            });
-            const data = await resp.json();
-            if (resp.ok && data.ok) {
-                window.location.href = data.redirect || 'index.php';
-                return;
-            }
-            showAlert(data.error || 'No se pudo publicar el alojamiento.');
-        } catch (err) {
-            showAlert('Error de conexión al publicar. Intenta nuevamente.');
-        } finally {
-            btnPublicar.disabled = currentStep !== totalSteps;
-            btnPublicar.textContent = '🚀 Publicar alojamiento';
-        }
-    });
-
-    renderStep(1, false);
-})();
+mostrarPaso(1, false);
 </script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

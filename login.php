@@ -4,46 +4,53 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once __DIR__ . '/config/conexion.php';
-$error="";
+$error = "";
+
+if (isset($_GET['suspendido'])) {
+    $error = "Tu cuenta ha sido suspendida. Contacta al administrador.";
+}
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $correo=trim($_POST['correo']?? '');
-    $clave =trim($_POST['clave']?? '');
+    $correo = trim($_POST['correo'] ?? '');
+    $clave = trim($_POST['clave'] ?? '');
 
-
-    if(!empty($correo)&&!empty($clave)){
-        //buscar usuario
+    if (!empty($correo) && !empty($clave)) {
+        // buscar usuario
         $sql = "
-        select id_usuario, nombre, apellido, correo, password_hash, rol
+        select id_usuario, nombre, apellido, correo, password_hash, rol, estado
         from usuarios
-        where correo=?";
-        $stmt=$conexion->prepare($sql);
-        $stmt->bind_param("s",$correo);
+        where correo = ?";
+        $stmt = $conexion->prepare($sql);
+        $stmt->bind_param("s", $correo);
         $stmt->execute();
         $resultado = $stmt->get_result();
 
-        if ($fila=$resultado->fetch_assoc()) {
-            //comparar contra con el hash de la bd
+        if ($fila = $resultado->fetch_assoc()) {
+            // comparar contra con el hash de la bd
             if (password_verify($clave, $fila['password_hash'])) {
-                
-                //credenciales guardadas
-                $_SESSION['id_usuario']=$fila['id_usuario'];
-                $_SESSION['nombre']=$fila['nombre'];
-                $_SESSION['apellido']=$fila['apellido'];
-                $_SESSION['correo']= $fila['correo'];
-                $_SESSION['rol']=$fila['rol'];
+                if ($fila['estado'] !== 'activo') {
+                    $error = "Tu cuenta ha sido suspendida. Contacta al administrador.";
+                } else {
+                    session_regenerate_id(true);
+                    // credenciales guardadas
+                    $_SESSION['id_usuario'] = $fila['id_usuario'];
+                    $_SESSION['nombre'] = $fila['nombre'];
+                    $_SESSION['apellido'] = $fila['apellido'];
+                    $_SESSION['correo'] = $fila['correo'];
+                    $_SESSION['rol'] = $fila['rol'];
 
-                header("Location: index.php");
-                exit();
+                    header("Location: index.php");
+                    exit();
+                }
             } else {
-                $error="Contraseña incorrecta";
+                $error = "Contraseña incorrecta";
             }
         } else {
-            $error="Ese correo no esta registrado";
+            $error = "Ese correo no esta registrado";
         }
         $stmt->close();
     } else {
-        $error="Falta correo o contraseña";
+        $error = "Falta correo o contraseña";
     }
 }
 

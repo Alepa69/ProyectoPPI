@@ -13,6 +13,8 @@ CREATE TABLE usuarios (
     correo VARCHAR(191) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     telefono VARCHAR(25) NULL,
+    biografia VARCHAR(500) NULL,
+    foto_perfil VARCHAR(255) NULL,
     rol ENUM('usuario','administrador') NOT NULL DEFAULT 'usuario',
     estado ENUM('activo','inactivo') NOT NULL DEFAULT 'activo',
     creado_en DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -177,5 +179,15 @@ CREATE TABLE reservas (
     KEY idx_reserva_solicitante (id_solicitante, estado)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE mensajes (
+    id_mensaje INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    id_reserva INT UNSIGNED NOT NULL,
+    id_emisor INT UNSIGNED NOT NULL,
+    mensaje TEXT NOT NULL,
+    creado_en TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_mensaje_reserva FOREIGN KEY (id_reserva) REFERENCES reservas(id_reserva) ON DELETE CASCADE,
+    CONSTRAINT fk_mensaje_emisor FOREIGN KEY (id_emisor) REFERENCES usuarios(id_usuario) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- IMPORTANTE: las tablas no impiden por si solas reservas superpuestas.
--- Implementar autorizacion, reglas y transacciones descritas en GUIA_EQUIPO.md.
+-- Implementar autorizacion, reglas y transacciones descritas en la propuesta.

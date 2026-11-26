@@ -1,33 +1,32 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
-require_once __DIR__ . '/config/sesion.php'; // Asegura que esté logueado
+require_once __DIR__ . '/config/sesion.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 
-// 1. Obtener datos del usuario
-$stmt = $conexion->prepare("SELECT nombre, apellido, correo, rol, estado FROM usuarios WHERE id_usuario = ?");
+// 1. Obtener datos del usuario (incluyendo teléfono, biografía y foto)
+$stmt = $conexion->prepare("SELECT nombre, apellido, correo, telefono, biografia, foto_perfil, rol, estado, creado_en FROM usuarios WHERE id_usuario = ?");
 $stmt->bind_param('i', $idUsuario);
 $stmt->execute();
 $usuario = $stmt->get_result()->fetch_assoc();
 
-// 2. Obtener estadísticas de Cliente (Reservas solicitadas)
+// 2. Obtener estadísticas de Huésped
 $stmt = $conexion->prepare("
-    SELECT estado, COUNT(*) as total 
-    FROM reservas 
-    WHERE id_solicitante = ? 
+    SELECT estado, COUNT(*) as total
+    FROM reservas
+    WHERE id_solicitante = ?
     GROUP BY estado
 ");
 $stmt->bind_param('i', $idUsuario);
 $stmt->execute();
 $reservasCliente = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-// Procesar estadísticas
 $statsCliente = ['pendiente' => 0, 'aceptada' => 0, 'rechazada' => 0, 'cancelada' => 0];
 foreach ($reservasCliente as $r) {
     $statsCliente[$r['estado']] = $r['total'];
 }
 
-// 3. Obtener estadísticas de Anfitrión (Si tiene alojamientos)
+// 3. Obtener estadísticas de Anfitrión
 $stmt = $conexion->prepare("
     SELECT COUNT(DISTINCT a.id_alojamiento) as total_alojamientos,
            COUNT(r.id_reserva) as total_reservas
@@ -38,11 +37,18 @@ $stmt = $conexion->prepare("
 $stmt->bind_param('i', $idUsuario);
 $stmt->execute();
 $statsAnfitrion = $stmt->get_result()->fetch_assoc();
-$esAnfitrion = (int)$statsAnfitrion['total_alojamientos'] > 0;
+$esAnfitrion = (int) $statsAnfitrion['total_alojamientos'] > 0;
+
+$flash = $_SESSION['perfil_flash'] ?? '';
+unset($_SESSION['perfil_flash']);
 
 $pageTitle = 'Mi Perfil';
 include __DIR__ . '/includes/header.php';
 ?>
+
+<?php if ($flash !== ''): ?>
+    <div class="alert alert-success" role="status"><?= htmlspecialchars($flash) ?></div>
+<?php endif; ?>
 
 <div class="row">
     <!-- Columna Izquierda: Información Personal -->
@@ -50,22 +56,50 @@ include __DIR__ . '/includes/header.php';
         <div class="card shadow-sm border-0">
             <div class="card-body text-center">
                 <div class="mb-3">
-                    <span class="display-1 text-secondary">👤</span>
+                    <?php if (!empty($usuario['foto_perfil'])): ?>
+                        <img src="<?= htmlspecialchars($usuario['foto_perfil']) ?>" alt="Foto de perfil" class="rounded-circle object-fit-cover shadow-sm" width="96" height="96">
+                    <?php else: ?>
+                        <span class="display-1 text-secondary">👤</span>
+                    <?php endif; ?>
                 </div>
                 <h3 class="h4"><?= htmlspecialchars($usuario['nombre'] . ' ' . $usuario['apellido']) ?></h3>
-                <p class="text-muted"><?= htmlspecialchars($usuario['correo']) ?></p>
+                <p class="text-muted mb-1"><?= htmlspecialchars($usuario['correo']) ?></p>
+                <p class="text-muted small mb-2">
+                    <i class="bi bi-telephone"></i>
+                    <?= !empty($usuario['telefono']) ? htmlspecialchars($usuario['telefono']) : 'Teléfono sin agregar' ?>
+                </p>
+
                 <span class="badge bg-primary">Rol: <?= ucfirst($usuario['rol']) ?></span>
                 <span class="badge bg-success"><?= ucfirst($usuario['estado']) ?></span>
-                
+
+                <?php if (!empty($usuario['biografia'])): ?>
+                    <hr>
+                    <p class="text-start small text-muted mb-0 text-break"><?= nl2br(htmlspecialchars($usuario['biografia'])) ?></p>
+                <?php endif; ?>
+
                 <hr>
-                <a href="editar_perfil.php" class="btn btn-outline-dark w-100">Editar mis datos</a>
+                <div class="d-grid gap-2">
+                    <a href="editar_perfil.php" class="btn btn-dark rounded-pill px-4">Editar mi perfil</a>
+                    <?php if ($esAnfitrion): ?>
+                        <a href="perfil_anfitrion.php?id=<?= $idUsuario ?>" class="btn btn-outline-dark rounded-pill btn-sm">Ver mi perfil público</a>
+                    <?php endif; ?>
+                    <?php if ($usuario['rol'] === 'administrador'): ?>
+                        <a href="admin.php" class="btn btn-outline-success rounded-pill btn-sm">Ir al Panel Admin</a>
+                    <?php endif; ?>
+                </div>
             </div>
+        </div>
+
+        <div class="d-grid mt-3">
+            <a href="index.php" class="btn btn-outline-success rounded-pill py-2 d-flex align-items-center justify-content-center gap-2 shadow-sm">
+                <i class="bi bi-arrow-left"></i> Volver al inicio
+            </a>
         </div>
     </div>
 
     <!-- Columna Derecha: Actividad -->
     <div class="col-md-8">
-        <!-- Sección Cliente -->
+        <!-- Sección Huésped -->
         <div class="card shadow-sm border-0 mb-4">
             <div class="card-header bg-white">
                 <h5 class="mb-0">Mi actividad como Huésped</h5>
@@ -74,23 +108,25 @@ include __DIR__ . '/includes/header.php';
                 <div class="row text-center">
                     <div class="col-6 col-md-3 mb-3">
                         <h6 class="text-muted small">Pendientes</h6>
-                        <span class="h3 text-warning"><?= $statsCliente['pendiente'] ?></span>
+                        <span class="h3 text-warning"><?= (int) $statsCliente['pendiente'] ?></span>
                     </div>
                     <div class="col-6 col-md-3 mb-3">
                         <h6 class="text-muted small">Aceptadas</h6>
-                        <span class="h3 text-success"><?= $statsCliente['aceptada'] ?></span>
+                        <span class="h3 text-success"><?= (int) $statsCliente['aceptada'] ?></span>
                     </div>
                     <div class="col-6 col-md-3 mb-3">
                         <h6 class="text-muted small">Rechazadas</h6>
-                        <span class="h3 text-secondary"><?= $statsCliente['rechazada'] ?></span>
+                        <span class="h3 text-secondary"><?= (int) $statsCliente['rechazada'] ?></span>
                     </div>
                     <div class="col-6 col-md-3 mb-3">
                         <h6 class="text-muted small">Canceladas</h6>
-                        <span class="h3 text-danger"><?= $statsCliente['cancelada'] ?></span>
+                        <span class="h3 text-danger"><?= (int) $statsCliente['cancelada'] ?></span>
                     </div>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="modulos/reservas/mis_solicitudes.php" class="btn btn-sm btn-outline-primary">Ver mis solicitudes de reserva</a>
+                    <a href="panel_cliente.php" class="btn btn-dark rounded-pill px-4">
+                        Ver mis solicitudes de reserva
+                    </a>
                 </div>
             </div>
         </div>
@@ -105,15 +141,14 @@ include __DIR__ . '/includes/header.php';
                 <div class="row text-center align-items-center">
                     <div class="col-md-6 mb-3">
                         <h6 class="text-muted small">Alojamientos publicados</h6>
-                        <span class="h3 text-primary"><?= $statsAnfitrion['total_alojamientos'] ?></span>
+                        <span class="h3 text-primary"><?= (int) $statsAnfitrion['total_alojamientos'] ?></span>
                     </div>
                     <div class="col-md-6 mb-3">
                         <h6 class="text-muted small">Reservas recibidas (histórico)</h6>
-                        <span class="h3 text-primary"><?= $statsAnfitrion['total_reservas'] ?></span>
+                        <span class="h3 text-primary"><?= (int) $statsAnfitrion['total_reservas'] ?></span>
                     </div>
                 </div>
                 <div class="text-end mt-3">
-                    <!-- Cambiamos el enlace para que active el modo anfitrión en la sesión -->
                     <a href="cambiar_modo.php?modo=anfitrion" class="btn btn-dark rounded-pill px-4">
                         ⚙️ Ir al Panel de Anfitrión
                     </a>
@@ -121,25 +156,24 @@ include __DIR__ . '/includes/header.php';
             </div>
         </div>
         <?php else: ?>
-        
+
         <!-- Tarjeta para Convertirse en Anfitrión -->
         <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
-            <!-- Cabecera con degradado verde oscuro -->
             <div class="p-4 text-center" style="background-image: linear-gradient(135deg, #0d2e21, #1a5c42);">
                 <h4 class="fw-bold mb-2 text-white">Completa tu perfil de Anfitrión</h4>
-                <p class="mb-0 text-white small" style="opacity: 0.85;">Es importante que completes tu perfil para poder recibir solicitudes de reserva y conectar con huéspedes.</p>
+                <p class="mb-0 text-white small" style="opacity: 0.85;">Publica tu primer alojamiento para empezar a recibir solicitudes de reserva.</p>
             </div>
-            
+
             <div class="card-body p-4 text-center bg-white">
                 <div class="mb-3">
                     <span style="font-size: 4rem;">🏡</span>
                 </div>
                 <h5 class="fw-bold text-dark">Conviértete en Anfitrión</h5>
                 <p class="text-muted small mb-4">
-                    Publica tu alojamiento, gestiona tus reservas y comienza a generar ingresos. 
+                    Publica tu alojamiento, gestiona tus reservas y comienza a generar ingresos.
                     Es totalmente gratis y tomará solo unos minutos.
                 </p>
-                
+
                 <div class="d-grid gap-2 col-md-8 mx-auto">
                     <a href="publicar_casa.php" class="btn btn-dark fw-bold rounded-pill py-2">
                         Empezar ahora
@@ -149,7 +183,6 @@ include __DIR__ . '/includes/header.php';
                     </button>
                 </div>
 
-                <!-- Acordeón con consejos (Oculto por defecto) -->
                 <div class="collapse mt-3" id="consejosAnfitrion">
                     <div class="text-start bg-light p-3 rounded-3 small text-muted">
                         <h6 class="fw-bold text-dark">Consejos para ser un gran anfitrión:</h6>
@@ -163,7 +196,7 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
         </div>
-        
+
         <?php endif; ?>
     </div>
 </div>

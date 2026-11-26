@@ -2,10 +2,75 @@
 require_once __DIR__ . '/config/conexion.php';
 
 // Filtros del listado
+$tipo = isset($_GET['tipo']) ? (int) $_GET['tipo'] : 0;
 $casa_titulo = isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']) : '';
+$departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
+$huespedes = (isset($_GET['huespedes']) && $_GET['huespedes'] !== '') ? (int) $_GET['huespedes'] : 0;
 $precio_minimo = isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : '';
 $precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
+
+$mapLat = 13.69;
+$mapLng = -89.23;
+
+switch ($departamento) {
+    case 'Ahuachapán':
+        $mapLat = 13.9214;
+        $mapLng = -89.8450;
+        break;
+    case 'Cabañas':
+        $mapLat = 13.8767;
+        $mapLng = -88.6297;
+        break;
+    case 'Chalatenango':
+        $mapLat = 14.0333;
+        $mapLng = -88.9333;
+        break;
+    case 'Cuscatlán':
+        $mapLat = 13.7167;
+        $mapLng = -88.9333;
+        break;
+    case 'La Libertad':
+        $mapLat = 13.6769;
+        $mapLng = -89.2797;
+        break;
+    case 'La Paz':
+        $mapLat = 13.5000;
+        $mapLng = -88.8667;
+        break;
+    case 'La Unión':
+        $mapLat = 13.3369;
+        $mapLng = -87.8439;
+        break;
+    case 'Morazán':
+        $mapLat = 13.6967;
+        $mapLng = -88.1061;
+        break;
+    case 'San Miguel':
+        $mapLat = 13.4833;
+        $mapLng = -88.1833;
+        break;
+    case 'San Salvador':
+        $mapLat = 13.6929;
+        $mapLng = -89.2182;
+        break;
+    case 'San Vicente':
+        $mapLat = 13.6333;
+        $mapLng = -88.8000;
+        break;
+    case 'Santa Ana':
+        $mapLat = 13.9942;
+        $mapLng = -89.5597;
+        break;
+    case 'Sonsonate':
+        $mapLat = 13.7189;
+        $mapLng = -89.7242;
+        break;
+    case 'Usulután':
+        $mapLat = 13.3500;
+        $mapLng = -88.4500;
+        break;
+}
 
 $params = [];
 $types = '';
@@ -16,6 +81,7 @@ $sql = "SELECT
     a.titulo,
     COALESCE(NULLIF(a.ciudad, ''), a.municipio) AS municipio,
     a.departamento,
+    a.capacidad,
     {$precioExpr} AS precio_persona_noche,
     a.latitud,
     a.longitud,
@@ -38,21 +104,40 @@ $sql = "SELECT
 FROM alojamientos a
 JOIN usuarios u ON a.id_anfitrion = u.id_usuario
 LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
-WHERE a.estado = 'publicado'";
+WHERE a.estado = 'publicado'
+  AND u.estado = 'activo'";
 
+if ($tipo > 0) {
+    $sql .= " AND a.id_tipo = ?";
+    $params[] = $tipo;
+    $types .= "i";
+}
 if (!empty($casa_titulo)) {
-    $sql .= " AND a.titulo LIKE ?";
-    $params[] = "%" . $casa_titulo . "%";
+    $sql .= " AND (a.titulo LIKE ? OR a.municipio LIKE ? OR a.ciudad LIKE ?)";
+    $busqueda = "%" . $casa_titulo . "%";
+    $params[] = $busqueda;
+    $params[] = $busqueda;
+    $params[] = $busqueda;
+    $types .= "sss";
+}
+if (!empty($departamento)) {
+    $sql .= " AND a.departamento = ?";
+    $params[] = $departamento;
     $types .= "s";
+}
+if ($huespedes > 0) {
+    $sql .= " AND a.capacidad >= ?";
+    $params[] = $huespedes;
+    $types .= "i";
 }
 if ($precio_minimo !== '') {
     $sql .= " AND {$precioExpr} >= ?";
-    $params[] = (float)$precio_minimo;
+    $params[] = (float) $precio_minimo;
     $types .= "d";
 }
 if ($precio_maximo !== '') {
     $sql .= " AND {$precioExpr} <= ?";
-    $params[] = (float)$precio_maximo;
+    $params[] = (float) $precio_maximo;
     $types .= "d";
 }
 
@@ -72,71 +157,123 @@ $stmt->execute();
 $resultado = $stmt->get_result();
 $casas = $resultado->fetch_all(MYSQLI_ASSOC);
 $pageTitle = 'Menú principal';
+$heroImagen = 'assets/img/ilopango.jpg';
 ?>
 
 <?php include __DIR__ . '/includes/header.php'; ?>
 
-    <form action="" method="GET" class="card shadow-sm border-0 rounded-4 p-3 mb-4">
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-4">
-                <label for="casa_titulo" class="form-label small fw-semibold">Buscar por nombre</label>
-                <input type="text" id="casa_titulo" name="casa_titulo" class="form-control rounded-pill"
-                       placeholder="Zona rosa" value="<?= htmlspecialchars($casa_titulo) ?>">
+<section class="hero-haloja hero-haloja--full mb-5">
+    <img src="<?= htmlspecialchars($heroImagen, ENT_QUOTES, 'UTF-8') ?>" alt="" class="hero-haloja__bg">
+    <div class="hero-haloja__contenido">
+        <span class="hero-haloja__badge">Destinos únicos en El Salvador</span>
+        <h1 class="hero-haloja__titulo">
+            Encuentra tu <span class="hero-haloja__acento">lugar</span> en el mundo
+        </h1>
+        <p class="hero-haloja__subtitulo">
+            Casas, cabañas y apartamentos con anfitriones que te hacen sentir en casa.
+        </p>
+
+        <form action="" method="GET" class="hero-buscador">
+            <?php if ($tipo > 0): ?>
+                <input type="hidden" name="tipo" value="<?= $tipo ?>">
+            <?php endif; ?>
+
+            <div class="hero-buscador__campo hero-buscador__campo--grande">
+                <label for="casa_titulo" class="hero-buscador__label">Buscar lugar</label>
+                <input type="text" id="casa_titulo" name="casa_titulo" class="form-control"
+                       placeholder="Ej. Zona Rosa, Escalón..." value="<?= htmlspecialchars($casa_titulo) ?>">
             </div>
-            <div class="col-6 col-md-2">
-                <label for="precio_minimo" class="form-label small fw-semibold">Precio min</label>
-                <input type="number" id="precio_minimo" name="precio_minimo" class="form-control rounded-pill"
-                       placeholder="0" min="0" value="<?= htmlspecialchars($precio_minimo) ?>">
+
+            <div class="hero-buscador__campo">
+                <label for="departamento" class="hero-buscador__label">Departamento</label>
+                <select name="departamento" id="departamento" class="form-select">
+                    <option value="">Todos</option>
+                    <option value="Ahuachapán" <?= $departamento === 'Ahuachapán' ? 'selected' : '' ?>>Ahuachapán</option>
+                    <option value="Cabañas" <?= $departamento === 'Cabañas' ? 'selected' : '' ?>>Cabañas</option>
+                    <option value="Chalatenango" <?= $departamento === 'Chalatenango' ? 'selected' : '' ?>>Chalatenango</option>
+                    <option value="Cuscatlán" <?= $departamento === 'Cuscatlán' ? 'selected' : '' ?>>Cuscatlán</option>
+                    <option value="La Libertad" <?= $departamento === 'La Libertad' ? 'selected' : '' ?>>La Libertad</option>
+                    <option value="La Paz" <?= $departamento === 'La Paz' ? 'selected' : '' ?>>La Paz</option>
+                    <option value="La Unión" <?= $departamento === 'La Unión' ? 'selected' : '' ?>>La Unión</option>
+                    <option value="Morazán" <?= $departamento === 'Morazán' ? 'selected' : '' ?>>Morazán</option>
+                    <option value="San Miguel" <?= $departamento === 'San Miguel' ? 'selected' : '' ?>>San Miguel</option>
+                    <option value="San Salvador" <?= $departamento === 'San Salvador' ? 'selected' : '' ?>>San Salvador</option>
+                    <option value="San Vicente" <?= $departamento === 'San Vicente' ? 'selected' : '' ?>>San Vicente</option>
+                    <option value="Santa Ana" <?= $departamento === 'Santa Ana' ? 'selected' : '' ?>>Santa Ana</option>
+                    <option value="Sonsonate" <?= $departamento === 'Sonsonate' ? 'selected' : '' ?>>Sonsonate</option>
+                    <option value="Usulután" <?= $departamento === 'Usulután' ? 'selected' : '' ?>>Usulután</option>
+                </select>
             </div>
-            <div class="col-6 col-md-2">
-                <label for="precio_maximo" class="form-label small fw-semibold">Precio max</label>
-                <input type="number" id="precio_maximo" name="precio_maximo" class="form-control rounded-pill"
-                       placeholder="500" min="0" value="<?= htmlspecialchars($precio_maximo) ?>">
+
+            <div class="hero-buscador__campo">
+                <label for="huespedes" class="hero-buscador__label">Huéspedes</label>
+                <input type="number" id="huespedes" name="huespedes" class="form-control"
+                       placeholder="Cualquiera" min="1" value="<?= $huespedes > 0 ? $huespedes : '' ?>">
             </div>
-            <div class="col-8 col-md-2">
-                <label for="orden" class="form-label small fw-semibold">Ordenar por</label>
-                <select name="orden" id="orden" class="form-select rounded-pill">
-                    <option value="">Mas recientes</option>
+
+            <div class="hero-buscador__campo">
+                <label for="precio_minimo" class="hero-buscador__label">Precio mín.</label>
+                <input type="number" id="precio_minimo" name="precio_minimo" class="form-control"
+                       placeholder="$0" min="0" value="<?= htmlspecialchars($precio_minimo) ?>">
+            </div>
+
+            <div class="hero-buscador__campo">
+                <label for="precio_maximo" class="hero-buscador__label">Precio máx.</label>
+                <input type="number" id="precio_maximo" name="precio_maximo" class="form-control"
+                       placeholder="$500" min="0" value="<?= htmlspecialchars($precio_maximo) ?>">
+            </div>
+
+            <div class="hero-buscador__campo">
+                <label for="orden" class="hero-buscador__label">Ordenar por</label>
+                <select name="orden" id="orden" class="form-select">
+                    <option value="">Más recientes</option>
                     <option value="precio_asc" <?= $orden === 'precio_asc' ? 'selected' : '' ?>>Menor a mayor</option>
                     <option value="precio_desc" <?= $orden === 'precio_desc' ? 'selected' : '' ?>>Mayor a menor</option>
                 </select>
             </div>
-            <div class="col-4 col-md-2">
-                <button class="btn btn-brand w-100">Buscar</button>
-            </div>
-        </div>
-    </form>
 
-    <div>
-      <h2>Casas disponibles</h2>
+            <div class="hero-buscador__accion">
+                <button type="submit" class="btn hero-buscador__btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" aria-hidden="true">
+                        <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
+                    </svg>
+                    <span>Buscar</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</section>
+
+    <div id="alojamientos">
+      <h2>Alojamientos disponibles</h2>
       <aside>
         <?php if (count($casas) === 0): ?>
-        <p class="text-muted">No se han encontrado casas disponibles</p>
+        <p class="text-muted">No se han encontrado alojamientos disponibles con esos filtros.</p>
         <?php endif; ?>
 
         <?php foreach ($casas as $p): ?>
           <div class="card border shadow-sm mb-3 overflow-hidden">
-                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
+                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" loading="lazy" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
                 <div class="card-body">
                     <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
-                    <p class="text-muted small mb-2">📍 <?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?></p>
+                    <p class="text-muted small mb-2"><?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?> · Hasta <?= (int) $p['capacidad'] ?> huéspedes</p>
                     <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary">$<?= number_format((float)$p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">la noche</small></span>
+                        <span class="fw-bold text-primary">$<?= number_format((float) $p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">/ persona · noche</small></span>
                     </div>
-                    <span class="text-muted small d-block mt-2 mb-3">Anfitrion: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
-                    <a href="listing.php?id=<?= (int)$p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">ver detalles</a>
+                    <span class="text-muted small d-block mt-2 mb-3">Anfitrión: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
+                    <a href="listing.php?id=<?= (int) $p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">Ver detalles</a>
                 </div>
             </div>
         <?php endforeach; ?>
       </aside>
 
-      <div id="map" style="height: 400px;"></div>
+      <div id="map" style="height: 420px;"></div>
     </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const casas = <?= json_encode($casas) ?>;
-    const map = L.map('map').setView([13.69, -89.23], 12);
+    const map = L.map('map').setView([<?= $mapLat ?>, <?= $mapLng ?>], 12);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
@@ -147,12 +284,29 @@ $pageTitle = 'Menú principal';
         if (Number.isNaN(lat) || Number.isNaN(lng)) return;
 
         const popup = document.createElement('div');
+        popup.style.width = '190px';
+
+        const img = document.createElement('img');
+        img.src = c.foto_principal;
+        img.alt = c.titulo;
+        img.style.width = '100%';
+        img.style.height = '105px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '8px';
+        img.style.marginBottom = '6px';
+        popup.appendChild(img);
+
         const link = document.createElement('a');
         link.href = 'listing.php?id=' + encodeURIComponent(c.id_alojamiento);
         link.textContent = c.titulo;
+        link.style.display = 'block';
         popup.appendChild(link);
-        popup.appendChild(document.createElement('br'));
-        popup.appendChild(document.createTextNode('$' + c.precio_persona_noche + ' / noche'));
+
+        const precio = document.createElement('span');
+        precio.textContent = '$' + Number(c.precio_persona_noche).toFixed(2) + ' / persona · noche';
+        precio.style.fontSize = '0.82rem';
+        precio.style.color = '#495057';
+        popup.appendChild(precio);
 
         L.marker([lat, lng]).addTo(map).bindPopup(popup);
     });

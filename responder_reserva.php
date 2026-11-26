@@ -1,4 +1,4 @@
-<?php // CARLOS
+<?php
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
 
@@ -6,6 +6,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: panel_anfitrion.php');
     exit;
 }
+
+verificar_csrf();
+
+date_default_timezone_set('America/El_Salvador');
 
 $idReserva = (int) ($_POST['id_reserva'] ?? 0);
 $accion    = $_POST['accion'] ?? '';
@@ -21,10 +25,12 @@ if ($idReserva <= 0 || !in_array($accion, $accionesValidas, true)) {
 try {
     $conexion->begin_transaction();
 
-    // Bloquear el alojamiento primero (mismo orden que las demas operaciones)
+    // Bloquear el alojamiento primero (mismo orden que las demás operaciones)
     $stmt = $conexion->prepare(
-        "SELECT a.id_alojamiento, a.id_anfitrion, a.capacidad
+        "SELECT a.id_alojamiento, a.id_anfitrion, a.capacidad, a.estado AS estado_alojamiento,
+                u.estado AS estado_anfitrion
          FROM alojamientos a
+         JOIN usuarios u ON u.id_usuario = a.id_anfitrion
          JOIN reservas r ON r.id_alojamiento = a.id_alojamiento
          WHERE r.id_reserva = ?
          FOR UPDATE"
@@ -51,11 +57,16 @@ try {
         throw new RuntimeException('La reserva no existe.');
     }
 
+    $hoy = date('Y-m-d');
+
     if ($accion === 'aceptar') {
         if ($reserva['estado'] !== 'pendiente') {
             throw new RuntimeException('Solo se pueden aceptar reservas pendientes.');
         }
-        if ($reserva['fecha_entrada'] < date('Y-m-d')) {
+        if ($alojamiento['estado_alojamiento'] !== 'publicado' || $alojamiento['estado_anfitrion'] !== 'activo') {
+            throw new RuntimeException('El alojamiento debe estar publicado y activo para aceptar reservas.');
+        }
+        if ($reserva['fecha_entrada'] < $hoy) {
             throw new RuntimeException('La fecha de entrada ya pasó.');
         }
         if ((int) $reserva['cantidad_huespedes'] > (int) $alojamiento['capacidad']) {
@@ -89,6 +100,9 @@ try {
         if ($reserva['estado'] !== 'pendiente') {
             throw new RuntimeException('Solo se pueden rechazar reservas pendientes.');
         }
+        if ($reserva['fecha_entrada'] < $hoy) {
+            throw new RuntimeException('La fecha de entrada ya pasó.');
+        }
         $stmt = $conexion->prepare(
             "UPDATE reservas SET estado = 'rechazada', respondido_en = NOW()
              WHERE id_reserva = ?"
@@ -101,7 +115,7 @@ try {
         if ($reserva['estado'] !== 'aceptada') {
             throw new RuntimeException('Solo se pueden cancelar reservas aceptadas.');
         }
-        if ($reserva['fecha_entrada'] < date('Y-m-d')) {
+        if ($reserva['fecha_entrada'] < $hoy) {
             throw new RuntimeException('La reserva ya comenzó, no se puede cancelar.');
         }
         $stmt = $conexion->prepare(
