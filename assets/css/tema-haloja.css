@@ -87,7 +87,7 @@ body > .container.mb-5 a:not(.btn):hover {
 /* ==========================================================
    3. BARRA DE NAVEGACIÓN SUPERIOR (Header sólido y limpio)
    ========================================================== */
-.navbar-davinci {
+.navbar-haloja {
   padding: 12px 0;
   z-index: 1030;
   background-color: var(--dv-paper);
@@ -106,7 +106,7 @@ body > .container.mb-5 a:not(.btn):hover {
   }
 }
 
-.marca-davinci {
+.marca-haloja {
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -116,7 +116,7 @@ body > .container.mb-5 a:not(.btn):hover {
   letter-spacing: 0.04em;
 }
 
-.marca-davinci img {
+.marca-haloja img {
   object-fit: contain;
 }
 

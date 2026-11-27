@@ -29,13 +29,13 @@ body {
 /* ==========================================================
    2. ESTILOS BASE DEL ENCABEZADO Y MARCA
    ========================================================== */
-.navbar-davinci {
+.navbar-haloja {
   background-color: #ffffff;
   border-bottom: 1px solid #dce5df;
   padding: 12px 0;
 }
 
-.marca-davinci {
+.marca-haloja {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -44,21 +44,21 @@ body {
   font-weight: 800;
 }
 
-.marca-davinci:hover {
+.marca-haloja:hover {
   color: #12332f;
 }
 
-.marca-davinci img {
+.marca-haloja img {
   object-fit: contain;
 }
 
-.enlaces-davinci .nav-link {
+.enlaces-haloja .nav-link {
   color: #344b4a;
   font-size: 1rem;
   font-weight: 500;
 }
 
-.enlaces-davinci .nav-link:hover {
+.enlaces-haloja .nav-link:hover {
   color: #183f39;
 }
 
@@ -66,7 +66,7 @@ body {
 /* ==========================================================
    3. BOTONES DE ACCIÓN EN BARRA SUPERIOR
    ========================================================== */
-.acciones-davinci {
+.acciones-haloja {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -111,34 +111,34 @@ body {
    4. DISTRIBUCIÓN RESPONSIVE DEL ENCABEZADO
    ========================================================== */
 @media (min-width: 1200px) {
-  .navbar-davinci > .container-fluid {
+  .navbar-haloja > .container-fluid {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
     column-gap: 20px;
     align-items: center;
   }
 
-  .navbar-davinci .navbar-brand {
+  .navbar-haloja .navbar-brand {
     justify-self: start;
     margin-right: 0;
   }
 
-  .navbar-davinci .navbar-collapse {
+  .navbar-haloja .navbar-collapse {
     display: contents !important;
   }
 
-  .enlaces-davinci {
+  .enlaces-haloja {
     justify-self: center;
   }
 
-  .acciones-davinci {
+  .acciones-haloja {
     justify-self: end;
     flex-wrap: nowrap;
   }
 }
 
 @media (max-width: 1199.98px) {
-  .acciones-davinci {
+  .acciones-haloja {
     padding-top: 12px;
     padding-bottom: 8px;
   }

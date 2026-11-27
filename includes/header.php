@@ -40,18 +40,18 @@ if (!empty($_SESSION['id_usuario'])) {
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'HALOJA' ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= $base ?>assets/css/tema-haloja.css?v=5">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/tema-haloja.css?v=6">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 
-    <nav class="navbar navbar-davinci sticky-top">
+    <nav class="navbar navbar-haloja sticky-top">
         <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
 
             <!-- IZQUIERDA: Marca y Logo -->
             <div class="bloque-izquierdo">
-                <a class="navbar-brand marca-davinci text-decoration-none m-0" href="<?= $base ?>index.php">
+                <a class="navbar-brand marca-haloja text-decoration-none m-0" href="<?= $base ?>index.php">
                     <img src="<?= $base ?>assets/img/logo-haloja.png" alt="Logo Haloja" width="36" height="36">
                     <span>HALOJA</span>
                 </a>
