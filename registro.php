@@ -3,6 +3,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Si ya inició sesión, redirigir al inicio
+if (!empty($_SESSION['id_usuario'])) {
+    header("Location: index.php");
+    exit();
+}
+
+if (empty($_SESSION['csrf_auth'])) {
+    $_SESSION['csrf_auth'] = bin2hex(random_bytes(32));
+}
+
 require_once __DIR__ . '/config/conexion.php';
 $mensaje="";
 $registroExitoso = false;
@@ -11,15 +21,21 @@ $apellido = "";
 $correo = "";
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $token = $_POST['csrf'] ?? '';
     $nombre = trim($_POST['nombre']??'');
     $apellido = trim($_POST['apellido']??'');
     $correo = trim($_POST['correo'] ??'');
     $clave = trim($_POST['clave'] ??'');
     $clave2 = trim($_POST['clave2'] ??'');
 
-    if (!empty($nombre)&&!empty($apellido)&&!empty($correo)&&!empty($clave)&&!empty($clave2)) {
-        
-        if ($clave !== $clave2) {
+    if (!hash_equals($_SESSION['csrf_auth'], (string)$token)) {
+        $mensaje = "<div class='alert alert-danger'>Sesión de formulario inválida. Recarga la página.</div>";
+    } elseif (!empty($nombre)&&!empty($apellido)&&!empty($correo)&&!empty($clave)&&!empty($clave2)) {
+        if (mb_strlen($nombre) > 100 || mb_strlen($apellido) > 100) {
+            $mensaje = "<div class='alert alert-warning'>Nombre y apellido deben tener máximo 100 caracteres.</div>";
+        } elseif (!filter_var($correo, FILTER_VALIDATE_EMAIL) || strlen($correo) > 191) {
+            $mensaje = "<div class='alert alert-warning'>Ingresa un correo electrónico válido (máximo 191 caracteres).</div>";
+        } elseif ($clave !== $clave2) {
             $mensaje = "<div class='alert alert-warning'>Las contraseñas no coinciden.</div>";
         } elseif (strlen($clave) < 8 || !preg_match('/[A-Z]/', $clave) || !preg_match('/[0-9]/', $clave)) {
             $mensaje = "<div class='alert alert-warning'>La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.</div>";
@@ -71,19 +87,20 @@ require_once __DIR__ . '/includes/header.php';
                 <?= $mensaje ?>
 
                 <form action="registro.php" method="POST">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf_auth']) ?>">
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Nombre:</label>
-                            <input type="text" name="nombre" class="form-control" value="<?= htmlspecialchars($nombre) ?>" required>
+                            <input type="text" name="nombre" class="form-control" maxlength="100" value="<?= htmlspecialchars($nombre) ?>" required>
                         </div>
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Apellido:</label>
-                            <input type="text" name="apellido" class="form-control" value="<?= htmlspecialchars($apellido) ?>" required>
+                            <input type="text" name="apellido" class="form-control" maxlength="100" value="<?= htmlspecialchars($apellido) ?>" required>
                         </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Correo electronico:</label>
-                        <input type="email" name="correo" class="form-control" value="<?= htmlspecialchars($correo) ?>" required>
+                        <input type="email" name="correo" class="form-control" maxlength="191" value="<?= htmlspecialchars($correo) ?>" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="regClave">Contraseña:</label>

@@ -3,6 +3,16 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Si ya inició sesión, redirigir al inicio
+if (!empty($_SESSION['id_usuario'])) {
+    header("Location: index.php");
+    exit();
+}
+
+if (empty($_SESSION['csrf_auth'])) {
+    $_SESSION['csrf_auth'] = bin2hex(random_bytes(32));
+}
+
 require_once __DIR__ . '/config/conexion.php';
 $error = "";
 
@@ -11,10 +21,13 @@ if (isset($_GET['suspendido'])) {
 }
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    $token = $_POST['csrf'] ?? '';
     $correo = trim($_POST['correo'] ?? '');
     $clave = trim($_POST['clave'] ?? '');
 
-    if (!empty($correo) && !empty($clave)) {
+    if (!hash_equals($_SESSION['csrf_auth'], (string)$token)) {
+        $error = "Sesión de formulario inválida. Recarga la página.";
+    } elseif (!empty($correo) && !empty($clave)) {
         // buscar usuario
         $sql = "
         select id_usuario, nombre, apellido, correo, password_hash, rol, estado
@@ -69,9 +82,10 @@ require_once __DIR__ . '/includes/header.php';
                 <?php endif; ?>
 
                 <form action="login.php" method="POST">
+                    <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf_auth']) ?>">
                     <div class="mb-3">
                         <label class="form-label">Correo:</label>
-                        <input type="email" name="correo" class="form-control" required>
+                        <input type="email" name="correo" class="form-control" maxlength="191" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label" for="loginClave">Contraseña:</label>

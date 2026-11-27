@@ -5,10 +5,22 @@ require_once __DIR__ . '/config/conexion.php';
 $tipo = isset($_GET['tipo']) ? (int) $_GET['tipo'] : 0;
 $casa_titulo = isset($_GET['casa_titulo']) ? trim($_GET['casa_titulo']) : '';
 $departamento = isset($_GET['departamento']) ? trim($_GET['departamento']) : '';
-$huespedes = (isset($_GET['huespedes']) && $_GET['huespedes'] !== '') ? (int) $_GET['huespedes'] : 0;
+$huespedes = (isset($_GET['huespedes']) && $_GET['huespedes'] !== '') ? max(0, (int) $_GET['huespedes']) : 0;
 $precio_minimo = isset($_GET['precio_minimo']) ? trim($_GET['precio_minimo']) : '';
 $precio_maximo = isset($_GET['precio_maximo']) ? trim($_GET['precio_maximo']) : '';
 $orden = isset($_GET['orden']) ? $_GET['orden'] : '';
+$errorFiltro = '';
+
+$precioMinValido = ($precio_minimo !== '' && is_numeric($precio_minimo) && (float) $precio_minimo >= 0) ? (float) $precio_minimo : null;
+$precioMaxValido = ($precio_maximo !== '' && is_numeric($precio_maximo) && (float) $precio_maximo >= 0) ? (float) $precio_maximo : null;
+
+if ($precio_minimo !== '' && $precioMinValido === null) {
+    $errorFiltro = 'El precio mínimo debe ser un número mayor o igual a 0.';
+} elseif ($precio_maximo !== '' && $precioMaxValido === null) {
+    $errorFiltro = 'El precio máximo debe ser un número mayor o igual a 0.';
+} elseif ($precioMinValido !== null && $precioMaxValido !== null && $precioMinValido > $precioMaxValido) {
+    $errorFiltro = 'El precio mínimo no puede ser mayor al precio máximo.';
+}
 
 $mapLat = 13.69;
 $mapLng = -89.23;
@@ -130,14 +142,14 @@ if ($huespedes > 0) {
     $params[] = $huespedes;
     $types .= "i";
 }
-if ($precio_minimo !== '') {
+if ($precioMinValido !== null) {
     $sql .= " AND {$precioExpr} >= ?";
-    $params[] = (float) $precio_minimo;
+    $params[] = $precioMinValido;
     $types .= "d";
 }
-if ($precio_maximo !== '') {
+if ($precioMaxValido !== null) {
     $sql .= " AND {$precioExpr} <= ?";
-    $params[] = (float) $precio_maximo;
+    $params[] = $precioMaxValido;
     $types .= "d";
 }
 
@@ -246,6 +258,9 @@ $heroImagen = 'assets/img/ilopango.jpg';
 
     <div id="alojamientos">
       <h2>Alojamientos disponibles</h2>
+      <?php if ($errorFiltro !== ''): ?>
+        <div class="alert alert-warning"><?= htmlspecialchars($errorFiltro) ?></div>
+      <?php endif; ?>
       <aside>
         <?php if (count($casas) === 0): ?>
         <p class="text-muted">No se han encontrado alojamientos disponibles con esos filtros.</p>

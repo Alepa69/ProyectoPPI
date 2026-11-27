@@ -32,8 +32,8 @@ function procesarImagenesPublicacion(&$errores, &$archivosSubidos)
         if ($url === '') {
             continue;
         }
-        if (!filter_var($url, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $url)) {
-            $errores[] = "La URL de imagen no es válida.";
+        if (!filter_var($url, FILTER_VALIDATE_URL) || !preg_match('#^https?://#i', $url) || strlen($url) > 500) {
+            $errores[] = "La URL de imagen no es válida o supera los 500 caracteres.";
             continue;
         }
         $imagenes[] = $url;
@@ -159,6 +159,14 @@ if ($titulo === '' || mb_strlen($titulo) > 150) {
 }
 if ($idTipo <= 0) {
     $errores[] = 'Selecciona un tipo de propiedad válido.';
+} else {
+    $stmtTipo = $conexion->prepare("SELECT id_tipo FROM tipos_alojamiento WHERE id_tipo = ? LIMIT 1");
+    $stmtTipo->bind_param('i', $idTipo);
+    $stmtTipo->execute();
+    if ($stmtTipo->get_result()->num_rows === 0) {
+        $errores[] = 'El tipo de propiedad seleccionado no existe.';
+    }
+    $stmtTipo->close();
 }
 if (!in_array($tipoEspacio, $tiposEspacioValidos, true)) {
     $errores[] = 'Selecciona un tipo de espacio válido.';
@@ -168,18 +176,26 @@ if ($descripcion === '') {
 }
 if ($departamento === '' || $ciudad === '' || $direccion === '') {
     $errores[] = 'Departamento, ciudad/municipio y dirección son obligatorios.';
+} elseif (mb_strlen($departamento) > 100 || mb_strlen($ciudad) > 100 || mb_strlen($direccion) > 255) {
+    $errores[] = 'Departamento/ciudad (máx. 100) o dirección (máx. 255) superan el límite permitido.';
+}
+if ($referencias !== null && mb_strlen($referencias) > 500) {
+    $errores[] = 'Las referencias de llegada deben tener máximo 500 caracteres.';
+}
+if ($reglasAdicionales !== null && mb_strlen($reglasAdicionales) > 2000) {
+    $errores[] = 'Las reglas adicionales deben tener máximo 2000 caracteres.';
 }
 if ($latitud === null || $longitud === null || $latitud < -90 || $latitud > 90 || $longitud < -180 || $longitud > 180) {
     $errores[] = 'Debes marcar la ubicación exacta en el mapa.';
 }
-if ($capacidadPersonas < 1 || $numHabitaciones < 0 || $numCamas < 1 || $numBanos < 0.5) {
-    $errores[] = 'Verifica la capacidad y distribución de espacios.';
+if ($capacidadPersonas < 1 || $capacidadPersonas > 50 || $numHabitaciones < 0 || $numHabitaciones > 30 || $numCamas < 1 || $numCamas > 50 || $numBanos < 0.5 || $numBanos > 30) {
+    $errores[] = 'Verifica que capacidad, habitaciones, camas y baños estén dentro de los límites permitidos.';
 }
-if ($horaCheckin === null || $horaCheckout === null || $estanciaMinima < 1) {
-    $errores[] = 'Verifica los horarios y la estancia mínima.';
+if ($horaCheckin === null || $horaCheckout === null || $estanciaMinima < 1 || $estanciaMinima > 365) {
+    $errores[] = 'Verifica los horarios y la estancia mínima (1 a 365 noches).';
 }
-if ($precioNoche <= 0 || $tarifaLimpieza < 0) {
-    $errores[] = 'El precio por persona/noche debe ser mayor a 0.';
+if ($precioNoche <= 0 || $precioNoche > 99999 || $tarifaLimpieza < 0 || $tarifaLimpieza > 99999) {
+    $errores[] = 'El precio debe ser mayor a $0 y las tarifas no pueden superar $99,999.';
 }
 
 // Imágenes (mínimo 1, máximo 8)
@@ -190,24 +206,28 @@ if (count($imagenes) < 1) {
     $errores[] = 'Puedes subir un máximo de 8 imágenes por alojamiento.';
 }
 
-// Amenidades seleccionadas
+// Amenidades seleccionadas (validar que existan en catálogo)
 $amenidadesIds = [];
 if (!empty($_POST['amenidades']) && is_array($_POST['amenidades'])) {
+    $resAmValidas = $conexion->query("SELECT id FROM amenidades");
+    $amValidas = $resAmValidas ? array_map('intval', array_column($resAmValidas->fetch_all(MYSQLI_ASSOC), 'id')) : [];
     foreach ($_POST['amenidades'] as $idAm) {
         $idEntero = (int) $idAm;
-        if ($idEntero > 0) {
+        if ($idEntero > 0 && in_array($idEntero, $amValidas, true)) {
             $amenidadesIds[] = $idEntero;
         }
     }
     $amenidadesIds = array_unique($amenidadesIds);
 }
 
-// Métodos de pago informativos seleccionados
+// Métodos de pago informativos seleccionados (validar que existan en catálogo)
 $metodosPagoIds = [];
 if (!empty($_POST['metodos_pago']) && is_array($_POST['metodos_pago'])) {
+    $resMpValidos = $conexion->query("SELECT id_metodo_pago FROM metodos_pago");
+    $mpValidos = $resMpValidos ? array_map('intval', array_column($resMpValidos->fetch_all(MYSQLI_ASSOC), 'id_metodo_pago')) : [];
     foreach ($_POST['metodos_pago'] as $idMp) {
         $idEntero = (int) $idMp;
-        if ($idEntero > 0) {
+        if ($idEntero > 0 && in_array($idEntero, $mpValidos, true)) {
             $metodosPagoIds[] = $idEntero;
         }
     }

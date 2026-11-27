@@ -35,21 +35,28 @@ if (!$esCliente && !$esAnfitrion) {
     exit('No tienes permiso para acceder a este chat.');
 }
 
+$chatActivo = in_array($reserva['estado'], ['pendiente', 'aceptada'], true);
+$errorChat = '';
+
 //guarda el mensaje
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     verificar_csrf();
-    $texto=trim($_POST['mensaje']??'');
+    $texto = trim($_POST['mensaje'] ?? '');
 
-    if ($texto!=='') {
-        $sqlInsert="INSERT INTO mensajes (id_reserva,id_emisor, mensaje)
-VALUES (?,?,?)";
-        $stmtInsert=$conexion->prepare($sqlInsert);
-        $stmtInsert->bind_param('iis',$idReserva,$idUsuario,$texto);
+    if (!$chatActivo) {
+        $errorChat = 'No puedes enviar mensajes porque la reserva fue ' . $reserva['estado'] . '.';
+    } elseif ($texto === '') {
+        $errorChat = 'Escribe un mensaje antes de enviarlo.';
+    } elseif (mb_strlen($texto) > 1000) {
+        $errorChat = 'El mensaje no puede superar los 1000 caracteres.';
+    } else {
+        $sqlInsert = "INSERT INTO mensajes (id_reserva, id_emisor, mensaje) VALUES (?, ?, ?)";
+        $stmtInsert = $conexion->prepare($sqlInsert);
+        $stmtInsert->bind_param('iis', $idReserva, $idUsuario, $texto);
         $stmtInsert->execute();
+        header('Location: chat.php?id_reserva=' . $idReserva);
+        exit;
     }
-    //para que no se ponga blanca la pantalla al enviar mensaje
-    header('Location: chat.php?id_reserva='.$idReserva);
-    exit;
 }
 
 //consulta los mensajes en orden
@@ -106,12 +113,22 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
+<?php if ($errorChat !== ''): ?>
+    <div class="alert alert-warning"><?= htmlspecialchars($errorChat) ?></div>
+<?php endif; ?>
+
+<?php if ($chatActivo): ?>
 <!--enciar mensaje-->
 <form method="POST" action="chat.php?id_reserva=<?= $idReserva ?>" class="d-flex gap-2">
     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <input type="text" name="mensaje" class="form-control" placeholder="Escribe un mensaje..." required autocomplete="off">
+    <input type="text" name="mensaje" class="form-control" maxlength="1000" placeholder="Escribe un mensaje..." required autocomplete="off">
     <button type="submit" class="btn btn-success">Enviar</button>
 </form>
+<?php else: ?>
+    <div class="alert alert-secondary mb-0">
+        Este chat es de solo lectura porque la reserva está <strong><?= htmlspecialchars($reserva['estado']) ?></strong>.
+    </div>
+<?php endif; ?>
 
 <script>
     // Scrollea hasta el último mensaje

@@ -542,6 +542,10 @@ function validarPaso(step) {
         if (!document.getElementById('hora_checkin').value || !document.getElementById('hora_checkout').value) {
             mostrarAlerta('Define los horarios de check-in y check-out.'); return false;
         }
+        const estancia = parseInt(document.getElementById('estancia_minima').value, 10);
+        if (isNaN(estancia) || estancia < 1 || estancia > 365) {
+            mostrarAlerta('La estancia mínima debe estar entre 1 y 365 noches.'); return false;
+        }
     } else if (step === 5) {
         const archivos = document.getElementById('inputImagenesFiles').files.length;
         const urls = Array.from(document.querySelectorAll('input[name="imagenes_url[]"]'))

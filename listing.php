@@ -244,26 +244,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($hayCruce) {
                 $error = 'Esas fechas ya están ocupadas por otra reserva aceptada.';
             } else {
-                // 2. Calcular total desde el precio guardado en la base de datos
-                $total = round($noches * $huespedes * $precioPorPersonaNoche, 2);
-
-                // 3. Guardar solicitud en estado pendiente
-                $guardar = $conexion->prepare("
-                    INSERT INTO reservas (
-                        id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
-                        cantidad_huespedes, precio_persona_noche_aplicado, total, estado
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
+                // Evitar solicitudes pendientes duplicadas del mismo huésped en las mismas fechas
+                $stmtDup = $conexion->prepare("
+                    SELECT id_reserva
+                    FROM reservas
+                    WHERE id_alojamiento = ?
+                      AND id_solicitante = ?
+                      AND estado = 'pendiente'
+                      AND fecha_entrada < ?
+                      AND fecha_salida > ?
+                    LIMIT 1
                 ");
-                $guardar->bind_param('iissidd', $id, $idUsuario, $entradaStr, $salidaStr, $huespedes, $precioPorPersonaNoche, $total);
+                $stmtDup->bind_param('iiss', $id, $idUsuario, $salidaStr, $entradaStr);
+                $stmtDup->execute();
+                $hayDuplicada = $stmtDup->get_result()->num_rows > 0;
+                $stmtDup->close();
 
-                if ($guardar->execute() && $guardar->affected_rows === 1) {
-                    $_SESSION['confirmacion_reserva'][$id] =
-                        'Solicitud enviada por $' . number_format($total, 2) . '. Quedó pendiente de respuesta del anfitrión.';
-                    header('Location: listing.php?id=' . $id, true, 303);
-                    exit;
+                if ($hayDuplicada) {
+                    $error = 'Ya tienes una solicitud pendiente para esas fechas en este alojamiento.';
+                } else {
+                    // 2. Calcular total desde el precio guardado en la base de datos
+                    $total = round($noches * $huespedes * $precioPorPersonaNoche, 2);
+
+                    // 3. Guardar solicitud en estado pendiente
+                    $guardar = $conexion->prepare("
+                        INSERT INTO reservas (
+                            id_alojamiento, id_solicitante, fecha_entrada, fecha_salida,
+                            cantidad_huespedes, precio_persona_noche_aplicado, total, estado
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pendiente')
+                    ");
+                    $guardar->bind_param('iissidd', $id, $idUsuario, $entradaStr, $salidaStr, $huespedes, $precioPorPersonaNoche, $total);
+
+                    if ($guardar->execute() && $guardar->affected_rows === 1) {
+                        $_SESSION['confirmacion_reserva'][$id] =
+                            'Solicitud enviada por $' . number_format($total, 2) . '. Quedó pendiente de respuesta del anfitrión.';
+                        header('Location: listing.php?id=' . $id, true, 303);
+                        exit;
+                    }
+
+                    $error = 'No se pudo enviar la solicitud. Intenta de nuevo.';
                 }
-
-                $error = 'No se pudo enviar la solicitud. Intenta de nuevo.';
             }
         }
     }
@@ -497,7 +517,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label for="entrada" class="form-label">Fecha de entrada</label>
                             <input type="date" name="entrada" id="entrada" class="form-control" min="<?= $hoy->format('Y-m-d') ?>" required>
                             <label for="salida" class="form-label">Fecha de salida</label>
-                            <input type="date" name="salida" id="salida" class="form-control" min="<?= $hoy->modify('+1 day')->format('Y-m-d') ?>" required>
+                            <input type="date" name="salida" id="salida" class="form-control" min="<?= $hoy->modify('+' . max(1, (int) $casa['estancia_minima']) . ' day')->format('Y-m-d') ?>" required>
                             <label for="huespedes" class="form-label">Número de huéspedes</label>
                             <input type="number" name="huespedes" id="huespedes" class="form-control" min="1" max="<?= (int) $casa['capacidad'] ?>" value="1" required>
                             <p class="listing-capacity-note">Este alojamiento admite hasta <?= (int) $casa['capacidad'] ?> huésped(es).</p>
@@ -570,6 +590,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     const inputHuespedes = document.getElementById('huespedes');
     const resumenCalculo = document.getElementById('resumenCalculo');
     const precioPersonaNoche = <?= json_encode($precioPorPersonaNoche) ?>;
+    const estanciaMinima = <?= (int) max(1, (int) $casa['estancia_minima']) ?>;
 
     function actualizarCalculo() {
         if (!inputEntrada || !inputSalida || !inputHuespedes || !resumenCalculo) return;
@@ -596,7 +617,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         inputEntrada.addEventListener('change', function () {
             if (this.value) {
                 const fechaMinSalida = new Date(this.value + 'T00:00:00');
-                fechaMinSalida.setDate(fechaMinSalida.getDate() + 1);
+                fechaMinSalida.setDate(fechaMinSalida.getDate() + estanciaMinima);
                 const minStr = fechaMinSalida.getFullYear() + '-'
                     + String(fechaMinSalida.getMonth() + 1).padStart(2, '0') + '-'
                     + String(fechaMinSalida.getDate()).padStart(2, '0');

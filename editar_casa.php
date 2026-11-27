@@ -63,11 +63,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $latitud = ($latRaw !== '' && is_numeric($latRaw)) ? (float) $latRaw : null;
     $longitud = ($lngRaw !== '' && is_numeric($lngRaw)) ? (float) $lngRaw : null;
 
+    $tiposValidosIds = array_map('intval', array_column($tipos, 'id_tipo'));
+    $metodosValidosIds = array_map('intval', array_column($metodosPago, 'id_metodo_pago'));
+
     $nuevosMtdosPago = [];
     if (!empty($_POST['metodos_pago']) && is_array($_POST['metodos_pago'])) {
         foreach ($_POST['metodos_pago'] as $idMp) {
             $entero = (int) $idMp;
-            if ($entero > 0) {
+            if ($entero > 0 && in_array($entero, $metodosValidosIds, true)) {
                 $nuevosMtdosPago[] = $entero;
             }
         }
@@ -76,12 +79,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($titulo) || empty($descripcion) || empty($departamento) || empty($municipio) || empty($direccion)) {
         $mensajeError = "Por favor completa todos los campos de texto obligatorios.";
-    } elseif ($id_tipo <= 0) {
-        $mensajeError = "Por favor selecciona un tipo de alojamiento.";
+    } elseif (mb_strlen($titulo) > 150 || mb_strlen($departamento) > 100 || mb_strlen($municipio) > 100 || mb_strlen($direccion) > 255) {
+        $mensajeError = "Título (máx. 150), departamento/municipio (máx. 100) o dirección (máx. 255) superan el límite.";
+    } elseif ($id_tipo <= 0 || !in_array($id_tipo, $tiposValidosIds, true)) {
+        $mensajeError = "Por favor selecciona un tipo de alojamiento válido.";
     } elseif ($latitud === null || $longitud === null || $latitud < -90 || $latitud > 90 || $longitud < -180 || $longitud > 180) {
         $mensajeError = "Por favor marca una ubicación válida en el mapa.";
-    } elseif ($capacidad <= 0 || $precio <= 0) {
-        $mensajeError = "La capacidad y el precio deben ser mayores a 0.";
+    } elseif ($capacidad < 1 || $capacidad > 100 || $precio <= 0 || $precio > 99999) {
+        $mensajeError = "La capacidad (1 a 100) y el precio ($0.01 a $99,999) deben estar dentro del rango válido.";
     } elseif (empty($nuevosMtdosPago)) {
         $mensajeError = "Selecciona al menos un método de pago informativo.";
     } else {

@@ -24,8 +24,8 @@ if (!preg_match('/^(admin\.php(\?tab=(usuarios|alojamientos))?|listing\.php\?id=
     $volverA = 'admin.php';
 }
 
-if (!$id) {
-    $_SESSION['admin_flash'] = ['tipo' => 'danger', 'mensaje' => 'Registro no válido.'];
+if (!$id || !in_array($tipo, ['usuario', 'alojamiento'], true) || !in_array($accion, ['suspender', 'activar', 'eliminar'], true)) {
+    $_SESSION['admin_flash'] = ['tipo' => 'danger', 'mensaje' => 'Parámetros o acción no válidos.'];
     header('Location: ' . $volverA);
     exit;
 }
@@ -34,6 +34,17 @@ try {
     if ($tipo === 'usuario') {
         if ($id === $idAdmin) {
             throw new RuntimeException('No puedes suspender ni eliminar tu propia cuenta de administrador.');
+        }
+
+        // Verificar que el usuario exista
+        $stmtExiste = $conexion->prepare("SELECT id_usuario FROM usuarios WHERE id_usuario = ? LIMIT 1");
+        $stmtExiste->bind_param('i', $id);
+        $stmtExiste->execute();
+        $existeUsuario = $stmtExiste->get_result()->fetch_assoc();
+        $stmtExiste->close();
+
+        if (!$existeUsuario) {
+            throw new RuntimeException('El usuario seleccionado no existe.');
         }
 
         if ($accion === 'suspender') {
@@ -74,6 +85,23 @@ try {
             $_SESSION['admin_flash'] = ['tipo' => 'success', 'mensaje' => 'Usuario eliminado permanentemente.'];
         }
     } elseif ($tipo === 'alojamiento') {
+        // Verificar que el alojamiento exista y conocer el estado del anfitrión
+        $stmtAloj = $conexion->prepare("
+            SELECT a.id_alojamiento, u.estado AS estado_anfitrion
+            FROM alojamientos a
+            JOIN usuarios u ON u.id_usuario = a.id_anfitrion
+            WHERE a.id_alojamiento = ?
+            LIMIT 1
+        ");
+        $stmtAloj->bind_param('i', $id);
+        $stmtAloj->execute();
+        $alojInfo = $stmtAloj->get_result()->fetch_assoc();
+        $stmtAloj->close();
+
+        if (!$alojInfo) {
+            throw new RuntimeException('La publicación seleccionada no existe.');
+        }
+
         if ($accion === 'suspender') {
             $motivoFinal = $motivo !== '' ? mb_substr($motivo, 0, 500) : 'Suspendido por un administrador';
             $stmt = $conexion->prepare("UPDATE alojamientos SET estado = 'bloqueado', motivo_bloqueo = ? WHERE id_alojamiento = ?");
@@ -82,6 +110,9 @@ try {
             $stmt->close();
             $_SESSION['admin_flash'] = ['tipo' => 'warning', 'mensaje' => 'Publicación bloqueada y ocultada del catálogo.'];
         } elseif ($accion === 'activar') {
+            if ($alojInfo['estado_anfitrion'] !== 'activo') {
+                throw new RuntimeException('No puedes activar esta publicación porque la cuenta del anfitrión está suspendida.');
+            }
             $stmt = $conexion->prepare("UPDATE alojamientos SET estado = 'publicado', motivo_bloqueo = NULL WHERE id_alojamiento = ?");
             $stmt->bind_param('i', $id);
             $stmt->execute();
