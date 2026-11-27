@@ -11,3 +11,13 @@ return [
     'remitente_correo' => 'tu_correo_verificado@gmail.com',
     'remitente_nombre' => 'HALOJA',
 ];
+
+//para el host
+
+// 'modo' => 'brevo'
+
+  
+// 'api_key' => 'TU_API_KEY'
+
+  
+// 'remitente_correo' => 'tu_correo_verificado@gmail.com'
