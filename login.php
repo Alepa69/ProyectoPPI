@@ -74,8 +74,14 @@ require_once __DIR__ . '/includes/header.php';
                         <input type="email" name="correo" class="form-control" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Contraseña:</label>
-                        <input type="password" name="clave" class="form-control" required>
+                        <label class="form-label" for="loginClave">Contraseña:</label>
+                        <div class="input-group">
+                            <input type="password" id="loginClave" name="clave" class="form-control" required>
+                            <button type="button" class="btn btn-outline-secondary" id="btnVerLoginClave" title="Ver por 3 segundos">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Mínimo 8 caracteres, una mayúscula y un número.</div>
                     </div>
                     <button type="submit" class="btn btn-dark w-100">Ingresar</button>
                 </form>
@@ -90,5 +96,27 @@ require_once __DIR__ . '/includes/header.php';
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const btnVerLogin = document.getElementById('btnVerLoginClave');
+const loginClave = document.getElementById('loginClave');
+let timerLogin = null;
+
+if (btnVerLogin && loginClave) {
+    btnVerLogin.addEventListener('click', function () {
+        if (timerLogin) clearTimeout(timerLogin);
+        if (loginClave.type === 'password') {
+            loginClave.type = 'text';
+            btnVerLogin.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            timerLogin = setTimeout(function () {
+                loginClave.type = 'password';
+                btnVerLogin.innerHTML = '<i class="bi bi-eye"></i>';
+            }, 3000);
+        } else {
+            loginClave.type = 'password';
+            btnVerLogin.innerHTML = '<i class="bi bi-eye"></i>';
+        }
+    });
+}
+</script>
 </body>
 </html>

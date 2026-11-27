@@ -86,12 +86,16 @@ require_once __DIR__ . '/includes/header.php';
                         <input type="email" name="correo" class="form-control" value="<?= htmlspecialchars($correo) ?>" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Contraseña:</label>
-                        <input type="password" name="clave" class="form-control" required>
+                        <label class="form-label" for="regClave">Contraseña:</label>
+                        <input type="password" id="regClave" name="clave" class="form-control" minlength="8" required>
+                        <div class="form-text">Debe tener al menos <strong>8 caracteres</strong>, una <strong>mayúscula</strong> y un <strong>número</strong>.</div>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Confirmar Contraseña:</label>
-                        <input type="password" name="clave2" class="form-control" required>
+                        <label class="form-label" for="regClave2">Confirmar Contraseña:</label>
+                        <input type="password" id="regClave2" name="clave2" class="form-control" minlength="8" required>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" id="btnVerClaves">
+                            <i class="bi bi-eye"></i> Ver ambas contraseñas (3 s)
+                        </button>
                     </div>
                     <button type="submit" class="btn btn-dark w-100">Registrarme</button>
                 </form>
@@ -120,6 +124,34 @@ require_once __DIR__ . '/includes/header.php';
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const btnVerClaves = document.getElementById('btnVerClaves');
+const regClave = document.getElementById('regClave');
+const regClave2 = document.getElementById('regClave2');
+let timerVerClaves = null;
+
+if (btnVerClaves && regClave && regClave2) {
+    btnVerClaves.addEventListener('click', function () {
+        const ocultas = regClave.type === 'password';
+        if (timerVerClaves) clearTimeout(timerVerClaves);
+
+        if (ocultas) {
+            regClave.type = 'text';
+            regClave2.type = 'text';
+            btnVerClaves.innerHTML = '<i class="bi bi-eye-slash"></i> Ocultar contraseñas';
+            timerVerClaves = setTimeout(function () {
+                regClave.type = 'password';
+                regClave2.type = 'password';
+                btnVerClaves.innerHTML = '<i class="bi bi-eye"></i> Ver ambas contraseñas (3 s)';
+            }, 3000);
+        } else {
+            regClave.type = 'password';
+            regClave2.type = 'password';
+            btnVerClaves.innerHTML = '<i class="bi bi-eye"></i> Ver ambas contraseñas (3 s)';
+        }
+    });
+}
+</script>
 
 <?php if ($registroExitoso): ?>
 <script>
