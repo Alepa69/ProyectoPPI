@@ -1,11 +1,20 @@
+/* ==========================================================
+   HALOJA — Estilos base heredados (cargado en listing.php)
+   Organizado por bloques con estilos simples y sin sombras.
+   ========================================================== */
+
+
+/* ==========================================================
+   1. COLORES BASE DE PÁGINA Y SECCIONES INFORMATIVAS
+   ========================================================== */
 body {
-  background-color: #f8faf9;
-  color: #192b25;
+  background-color: #f7f7f2;
+  color: #243631;
 }
 
 .portada {
   background-color: #173e32;
-  color: white;
+  color: #ffffff;
 }
 
 .seccion-anfitriones {
@@ -16,42 +25,47 @@ body {
   border-top: 4px solid #198754;
 }
 
-/* Fondo y tamaño del menú */
+
+/* ==========================================================
+   2. ESTILOS BASE DEL ENCABEZADO Y MARCA
+   ========================================================== */
 .navbar-davinci {
-  background-color: #faf9f6;
+  background-color: #ffffff;
+  border-bottom: 1px solid #dce5df;
   padding: 12px 0;
 }
 
-/* Icono junto al nombre */
 .marca-davinci {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #173e3a;
-  font-size: 32px;
+  color: #12332f;
+  font-size: 1.5rem;
   font-weight: 800;
 }
 
 .marca-davinci:hover {
-  color: #173e3a;
+  color: #12332f;
 }
 
 .marca-davinci img {
   object-fit: contain;
 }
 
-/* Opciones del menú */
 .enlaces-davinci .nav-link {
   color: #344b4a;
-  font-size: 17px;
+  font-size: 1rem;
   font-weight: 500;
 }
 
 .enlaces-davinci .nav-link:hover {
-  color: #198754;
+  color: #183f39;
 }
 
-/* Botones */
+
+/* ==========================================================
+   3. BOTONES DE ACCIÓN EN BARRA SUPERIOR
+   ========================================================== */
 .acciones-davinci {
   display: flex;
   flex-wrap: wrap;
@@ -61,37 +75,41 @@ body {
 
 .boton-anfitrion,
 .boton-ingresar {
-  border-radius: 30px;
-  padding: 10px 18px;
+  border-radius: 999px;
+  padding: 8px 18px;
   white-space: nowrap;
 }
 
 .boton-anfitrion {
-  color: #173e3a;
-  border: 1px solid #173e3a;
+  color: #183f39;
+  border: 1px solid #183f39;
+  background-color: #ffffff;
 }
 
 .boton-anfitrion:hover {
-  color: white;
-  background-color: #173e3a;
+  color: #ffffff;
+  background-color: #183f39;
 }
 
 .boton-ingresar {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: white;
-  background-color: #173e3a;
-  border: 1px solid #173e3a;
+  color: #ffffff;
+  background-color: #183f39;
+  border: 1px solid #183f39;
 }
 
 .boton-ingresar:hover {
-  color: white;
-  background-color: #24564f;
-  border-color: #24564f;
+  color: #ffffff;
+  background-color: #12332f;
+  border-color: #12332f;
 }
 
-/* Distribución en computadora */
+
+/* ==========================================================
+   4. DISTRIBUCIÓN RESPONSIVE DEL ENCABEZADO
+   ========================================================== */
 @media (min-width: 1200px) {
   .navbar-davinci > .container-fluid {
     display: grid;
@@ -119,7 +137,6 @@ body {
   }
 }
 
-/* Espacio para los botones en celular */
 @media (max-width: 1199.98px) {
   .acciones-davinci {
     padding-top: 12px;

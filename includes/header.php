@@ -40,13 +40,13 @@ if (!empty($_SESSION['id_usuario'])) {
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'HALOJA' ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="<?= $base ?>assets/css/tema-haloja.css?v=4">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/tema-haloja.css?v=5">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
 <body>
 
-    <nav class="navbar navbar-davinci efecto-cristal sticky-top shadow-sm">
+    <nav class="navbar navbar-davinci sticky-top">
         <div class="container-fluid px-4 d-flex align-items-center justify-content-between">
 
             <!-- IZQUIERDA: Marca y Logo -->
@@ -120,7 +120,7 @@ $enInicio = ($paginaActual === 'index.php');
 
                     <div class="dropdown">
                         <!-- Botón píldora con las 3 rayitas y foto o inicial -->
-                        <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);"></i>
                             <?php if (!empty($usuarioMenu['foto_perfil'])): ?>
                                 <img src="<?= $base . htmlspecialchars($usuarioMenu['foto_perfil']) ?>" alt="Foto de perfil" class="rounded-circle object-fit-cover" width="34" height="34">
@@ -132,7 +132,7 @@ $enInicio = ($paginaActual === 'index.php');
                         </button>
 
 <!-- Menú desplegable -->
-<ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 mt-2 rounded-4 p-2 menu-haloja" style="min-width: 245px;">
+<ul class="dropdown-menu dropdown-menu-end mt-2 rounded-4 p-2 menu-haloja" style="min-width: 245px;">
 
     <!-- Saludo e indicador de modo actual -->
     <li class="px-3 py-2 d-flex align-items-center justify-content-between">
@@ -223,7 +223,7 @@ $enInicio = ($paginaActual === 'index.php');
                     <!-- Usuarios no logueados -->
                     <div class="d-flex align-items-center gap-3">
                         <a href="<?= $base ?>registro.php" class="accion-texto">Registro</a>
-                        <a href="<?= $base ?>login.php" class="btn boton-ingresar shadow-sm">
+                        <a href="<?= $base ?>login.php" class="btn boton-ingresar">
                             <i class="bi bi-person-circle fs-5"></i> Ingresar
                         </a>
                     </div>
