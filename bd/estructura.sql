@@ -674,4 +674,9 @@ INSERT INTO alojamiento_metodo_pago (id_alojamiento, id_metodo_pago) VALUES
 (19, 1), (19, 2),
 (20, 2);
 
+alter table usuarios
+  add column if not exists telefono varchar(20) null default null,
+  add column if not exists biografia text null default null,
+  add column if not exists foto_perfil varchar(255) null default null;
+
 COMMIT;
