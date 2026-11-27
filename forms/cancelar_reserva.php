@@ -1,11 +1,11 @@
 <?php
-require_once __DIR__ . '/config/conexion.php';
-require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php';
 
 // Solo permitimos entrar aquí si se envió el formulario por POST
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: panel_cliente.php');
+    header('Location: ../panel_cliente.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $idReserva = (int) ($_POST['id_reserva'] ?? 0);
 
 if ($idReserva <= 0) {
     $_SESSION['flash'] = ['tipo' => 'danger', 'texto' => 'Reserva no válida.'];
-    header('Location: panel_cliente.php');
+    header('Location: ../panel_cliente.php');
     exit;
 }
 
@@ -83,5 +83,5 @@ try {
     $_SESSION['flash'] = ['tipo' => 'danger', 'texto' => 'No se pudo cancelar la reserva.'];
 }
 
-header('Location: panel_cliente.php');
+header('Location: ../panel_cliente.php');
 exit;

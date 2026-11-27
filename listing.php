@@ -310,7 +310,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="d-flex flex-wrap align-items-center gap-2">
                 <?php if ($esAnfitrion): ?>
-                    <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
+                    <a href="forms/editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success btn-sm">Editar publicación</a>
                 <?php endif; ?>
 
                 <?php if ($esAdmin): ?>
@@ -319,7 +319,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Estado: <?= escapar(ucfirst($casa['estado'])) ?>
                     </span>
 
-                    <form method="post" action="admin_acciones.php" class="d-inline-flex gap-2">
+                    <form method="post" action="forms/admin_acciones.php" class="d-inline-flex gap-2">
                         <input type="hidden" name="csrf" value="<?= escapar($_SESSION['csrf_admin']) ?>">
                         <input type="hidden" name="tipo" value="alojamiento">
                         <input type="hidden" name="id" value="<?= (int) $id ?>">
@@ -510,7 +510,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <a href="login.php" class="btn btn-success w-100 mt-2">Iniciar sesión</a>
                     <?php elseif ($esAnfitrion): ?>
                         <p class="listing-login-note">Este alojamiento pertenece a tu cuenta.</p>
-                        <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success w-100 mt-2">Editar mi publicación</a>
+                        <a href="forms/editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success w-100 mt-2">Editar mi publicación</a>
                     <?php else: ?>
                         <form method="post" action="listing.php?id=<?= (int) $id ?>" class="listing-booking-form"
                               data-precio="<?= escapar($precioPorPersonaNoche) ?>"

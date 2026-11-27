@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config/conexion.php';
-require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 $error = '';
@@ -73,13 +73,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (!in_array($ext, $extPermitidas, true) || @getimagesize($archivo['tmp_name']) === false) {
             $error = 'Usa una foto JPG, PNG o WEBP válida.';
         } else {
-            $carpeta = __DIR__ . '/uploads/perfiles';
+            $carpeta = __DIR__ . '/../uploads/perfiles';
             if (!is_dir($carpeta)) {
                 mkdir($carpeta, 0755, true);
             }
             $nombreNuevo = uniqid('perfil_', true) . '.' . $ext;
             $rutaRelativa = 'uploads/perfiles/' . $nombreNuevo;
-            $rutaAbsoluta = __DIR__ . '/' . $rutaRelativa;
+            $rutaAbsoluta = __DIR__ . '/../' . $rutaRelativa;
 
             if (!move_uploaded_file($archivo['tmp_name'], $rutaAbsoluta)) {
                 $error = 'No se pudo guardar la foto de perfil en el servidor.';
@@ -103,8 +103,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Borrar foto anterior si cambió
             if (!empty($usuario['foto_perfil']) && $usuario['foto_perfil'] !== $fotoGuardar) {
-                $rutaVieja = __DIR__ . '/' . $usuario['foto_perfil'];
-                if (is_file($rutaVieja) && strpos(realpath($rutaVieja) ?: '', realpath(__DIR__ . '/uploads/perfiles') ?: '') === 0) {
+                $rutaVieja = __DIR__ . '/../' . $usuario['foto_perfil'];
+                if (is_file($rutaVieja) && strpos(realpath($rutaVieja) ?: '', realpath(__DIR__ . '/../uploads/perfiles') ?: '') === 0) {
                     @unlink($rutaVieja);
                 }
             }
@@ -114,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['correo'] = $correo;
             $_SESSION['perfil_flash'] = 'Tu perfil fue actualizado correctamente.';
 
-            header('Location: perfil.php');
+            header('Location: ../perfil.php');
             exit;
         } catch (mysqli_sql_exception $e) {
             if ($rutaArchivoNuevo && is_file($rutaArchivoNuevo)) {
@@ -130,7 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Editar Perfil';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="row justify-content-center">
@@ -201,7 +201,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <a href="perfil.php" class="btn btn-outline-secondary">Cancelar</a>
+                        <a href="../perfil.php" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-dark">Guardar cambios</button>
                     </div>
                 </form>
@@ -210,4 +210,4 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

@@ -129,7 +129,7 @@ include __DIR__ . '/includes/header.php';
                         </td>
                         <td>
                             <?php if ($puedeCancelar): ?>
-                                <form method="POST" action="cancelar_reserva.php" class="d-inline"
+                                <form method="POST" action="forms/cancelar_reserva.php" class="d-inline"
                                       onsubmit="return confirm('¿Seguro que quieres cancelar esta reserva?');">
                                     <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                     <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">

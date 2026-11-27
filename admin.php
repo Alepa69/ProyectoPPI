@@ -176,7 +176,7 @@ include __DIR__ . '/includes/header.php';
                                     <?php if ($esMismoAdmin): ?>
                                         <span class="text-muted small">Tu cuenta</span>
                                     <?php else: ?>
-                                        <form method="post" action="admin_acciones.php" class="d-inline">
+                                        <form method="post" action="forms/admin_acciones.php" class="d-inline">
                                             <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf_admin']) ?>">
                                             <input type="hidden" name="tipo" value="usuario">
                                             <input type="hidden" name="id" value="<?= (int) $u['id_usuario'] ?>">
@@ -252,7 +252,7 @@ include __DIR__ . '/includes/header.php';
                                     <span class="badge <?= $badgeEstado ?>"><?= ucfirst($a['estado']) ?></span>
                                 </td>
                                 <td class="text-end">
-                                    <form method="post" action="admin_acciones.php" class="d-inline">
+                                    <form method="post" action="forms/admin_acciones.php" class="d-inline">
                                         <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf_admin']) ?>">
                                         <input type="hidden" name="tipo" value="alojamiento">
                                         <input type="hidden" name="id" value="<?= (int) $a['id_alojamiento'] ?>">

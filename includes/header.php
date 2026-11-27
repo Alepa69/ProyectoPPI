@@ -3,6 +3,8 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$base = basename(dirname($_SERVER['SCRIPT_NAME'] ?? '')) === 'forms' ? '../' : '';
+
 $usuarioMenu = null;
 $esAnfitrionReal = false;
 $modoActual = $_SESSION['modo'] ?? 'huesped';
@@ -38,7 +40,7 @@ if (!empty($_SESSION['id_usuario'])) {
     <title><?= isset($pageTitle) ? htmlspecialchars($pageTitle) : 'HALOJA' ?></title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="assets/css/tema-haloja.css?v=4">
+    <link rel="stylesheet" href="<?= $base ?>assets/css/tema-haloja.css?v=4">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 </head>
@@ -49,8 +51,8 @@ if (!empty($_SESSION['id_usuario'])) {
 
             <!-- IZQUIERDA: Marca y Logo -->
             <div class="bloque-izquierdo">
-                <a class="navbar-brand marca-davinci text-decoration-none m-0" href="index.php">
-                    <img src="assets/img/logo-haloja.png" alt="Logo Haloja" width="36" height="36">
+                <a class="navbar-brand marca-davinci text-decoration-none m-0" href="<?= $base ?>index.php">
+                    <img src="<?= $base ?>assets/img/logo-haloja.png" alt="Logo Haloja" width="36" height="36">
                     <span>HALOJA</span>
                 </a>
             </div>
@@ -67,17 +69,17 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- MODO ANFITRIÓN -->
         <ul class="navbar-nav flex-row gap-2">
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="panel_anfitrion.php">
+                <a class="nav-link accion-texto <?= $paginaActual === 'panel_anfitrion.php' ? 'active' : '' ?>" href="<?= $base ?>panel_anfitrion.php">
                     <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= $paginaActual === 'mis_alojamientos.php' ? 'active' : '' ?>" href="mis_alojamientos.php">
+                <a class="nav-link accion-texto <?= $paginaActual === 'mis_alojamientos.php' ? 'active' : '' ?>" href="<?= $base ?>mis_alojamientos.php">
                     <i class="bi bi-houses fs-5"></i> Mis alojamientos
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="publicar_casa.php">
+                <a class="nav-link accion-texto <?= $paginaActual === 'publicar_casa.php' ? 'active' : '' ?>" href="<?= $base ?>forms/publicar_casa.php">
                     <i class="bi bi-house-add fs-5"></i> Publicar casa
                 </a>
             </li>
@@ -88,22 +90,22 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- MODO HUÉSPED / VISITANTE: Tipos de Alojamiento por id_tipo -->
         <ul class="navbar-nav flex-row gap-2">
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="index.php">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="<?= $base ?>index.php">
                     <i class="bi bi-grid fs-5"></i> Todos
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="index.php?tipo=1">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=1">
                     <i class="bi bi-house-door fs-5"></i> Casa
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="index.php?tipo=2">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=2">
                     <i class="bi bi-building fs-5"></i> Apartamento
                 </a>
             </li>
             <li class="nav-item">
-                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="index.php?tipo=3">
+                <a class="nav-link accion-texto <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=3">
                     <i class="bi bi-door-open fs-5"></i> Habitación
                 </a>
             </li>
@@ -121,7 +123,7 @@ $enInicio = ($paginaActual === 'index.php');
                         <button class="btn bg-white border rounded-pill d-flex align-items-center gap-2 py-1 px-2 shadow-sm boton-perfil-pill" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-list fs-5 ms-1" style="color: var(--dv-forest);"></i>
                             <?php if (!empty($usuarioMenu['foto_perfil'])): ?>
-                                <img src="<?= htmlspecialchars($usuarioMenu['foto_perfil']) ?>" alt="Foto de perfil" class="rounded-circle object-fit-cover" width="34" height="34">
+                                <img src="<?= $base . htmlspecialchars($usuarioMenu['foto_perfil']) ?>" alt="Foto de perfil" class="rounded-circle object-fit-cover" width="34" height="34">
                             <?php else: ?>
                                 <div class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 14px; background-color: var(--dv-forest);">
                                     <?= htmlspecialchars(mb_strtoupper(mb_substr($usuarioMenu['nombre'], 0, 1))) ?>
@@ -143,14 +145,14 @@ $enInicio = ($paginaActual === 'index.php');
     </li>
 
     <li>
-        <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="perfil.php">
+        <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>perfil.php">
             <i class="bi bi-person fs-5"></i> Mi perfil
         </a>
     </li>
 
     <?php if (($usuarioMenu['rol'] ?? '') === 'administrador'): ?>
         <li>
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="admin.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="<?= $base ?>admin.php">
                 <i class="bi bi-shield-lock fs-5"></i> Panel Admin
             </a>
         </li>
@@ -160,17 +162,17 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- En Modo Anfitrión: en PC ya están en el header, así que solo se muestran aquí en celular (d-lg-none) -->
         <li class="d-lg-none"><hr class="dropdown-divider my-1"></li>
         <li class="d-lg-none">
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_anfitrion.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>panel_anfitrion.php">
                 <i class="bi bi-calendar-check fs-5"></i> Reservas recibidas
             </a>
         </li>
         <li class="d-lg-none">
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="mis_alojamientos.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>mis_alojamientos.php">
                 <i class="bi bi-houses fs-5"></i> Mis alojamientos
             </a>
         </li>
         <li class="d-lg-none">
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>forms/publicar_casa.php">
                 <i class="bi bi-house-add fs-5"></i> Publicar casa
             </a>
         </li>
@@ -178,12 +180,12 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- En Modo Huésped: solo opciones de huésped -->
         <li><hr class="dropdown-divider my-1"></li>
         <li>
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="panel_cliente.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>panel_cliente.php">
                 <i class="bi bi-luggage fs-5"></i> Mis reservas
             </a>
         </li>
         <li>
-            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="publicar_casa.php">
+            <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2" href="<?= $base ?>forms/publicar_casa.php">
                 <i class="bi bi-house-add fs-5"></i> Publicar casa
             </a>
         </li>
@@ -194,13 +196,13 @@ $enInicio = ($paginaActual === 'index.php');
         <li><hr class="dropdown-divider my-1"></li>
         <?php if ($modoActual === 'anfitrion'): ?>
             <li>
-                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="cambiar_modo.php?modo=huesped" style="color: var(--dv-forest);">
+                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="<?= $base ?>forms/cambiar_modo.php?modo=huesped" style="color: var(--dv-forest);">
                     <i class="bi bi-arrow-repeat fs-5"></i> Cambiar a Huésped
                 </a>
             </li>
         <?php else: ?>
             <li>
-                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="cambiar_modo.php?modo=anfitrion" style="color: var(--dv-forest);">
+                <a class="dropdown-item rounded-3 py-2 d-flex align-items-center gap-2 fw-semibold" href="<?= $base ?>forms/cambiar_modo.php?modo=anfitrion" style="color: var(--dv-forest);">
                     <i class="bi bi-arrow-repeat fs-5"></i> Cambiar a Anfitrión
                 </a>
             </li>
@@ -210,7 +212,7 @@ $enInicio = ($paginaActual === 'index.php');
     <li><hr class="dropdown-divider my-1"></li>
 
     <li>
-        <a class="dropdown-item rounded-3 py-2 text-danger d-flex align-items-center gap-2" href="cerrarsesion.php">
+        <a class="dropdown-item rounded-3 py-2 text-danger d-flex align-items-center gap-2" href="<?= $base ?>forms/cerrarsesion.php">
             <i class="bi bi-box-arrow-right fs-5"></i> Cerrar sesión
         </a>
     </li>
@@ -220,8 +222,8 @@ $enInicio = ($paginaActual === 'index.php');
                 <?php else: ?>
                     <!-- Usuarios no logueados -->
                     <div class="d-flex align-items-center gap-3">
-                        <a href="registro.php" class="accion-texto">Registro</a>
-                        <a href="login.php" class="btn boton-ingresar shadow-sm">
+                        <a href="<?= $base ?>registro.php" class="accion-texto">Registro</a>
+                        <a href="<?= $base ?>login.php" class="btn boton-ingresar shadow-sm">
                             <i class="bi bi-person-circle fs-5"></i> Ingresar
                         </a>
                     </div>
@@ -233,16 +235,16 @@ $enInicio = ($paginaActual === 'index.php');
         <!-- Barra de categorías solo visible en celulares/tablets (Modo Huésped) -->
     <?php if (!$usuarioMenu || $modoActual !== 'anfitrion'): ?>
         <div class="d-flex d-lg-none overflow-auto border-top px-3 py-2 gap-2" style="scrollbar-width: none;">
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="index.php">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 0) ? 'active' : '' ?>" href="<?= $base ?>index.php">
                 <i class="bi bi-grid"></i> Todos
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="index.php?tipo=1">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 1) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=1">
                 <i class="bi bi-house-door"></i> Casa
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="index.php?tipo=2">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 2) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=2">
                 <i class="bi bi-building"></i> Apartamento
             </a>
-            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="index.php?tipo=3">
+            <a class="accion-texto py-1 px-3 flex-shrink-0 <?= ($enInicio && $tipoActivo === 3) ? 'active' : '' ?>" href="<?= $base ?>index.php?tipo=3">
                 <i class="bi bi-door-open"></i> Habitación
             </a>
         </div>

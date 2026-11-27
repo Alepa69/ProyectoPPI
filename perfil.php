@@ -51,7 +51,7 @@ include __DIR__ . '/includes/header.php';
 
                 <hr>
                 <div class="d-grid gap-2">
-                    <a href="editar_perfil.php" class="btn btn-dark rounded-pill px-4">Editar mi perfil</a>
+                    <a href="forms/editar_perfil.php" class="btn btn-dark rounded-pill px-4">Editar mi perfil</a>
                     <?php if ($esAnfitrion): ?>
                         <a href="perfil_anfitrion.php?id=<?= $idUsuario ?>" class="btn btn-outline-dark rounded-pill btn-sm">Ver mi perfil público</a>
                     <?php endif; ?>
@@ -121,7 +121,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
                 </div>
                 <div class="text-end mt-3">
-                    <a href="cambiar_modo.php?modo=anfitrion" class="btn btn-dark rounded-pill px-4">
+                    <a href="forms/cambiar_modo.php?modo=anfitrion" class="btn btn-dark rounded-pill px-4">
                         ⚙️ Ir al Panel de Anfitrión
                     </a>
                 </div>
@@ -147,7 +147,7 @@ include __DIR__ . '/includes/header.php';
                 </p>
 
                 <div class="d-grid gap-2 col-md-8 mx-auto">
-                    <a href="publicar_casa.php" class="btn btn-dark fw-bold rounded-pill py-2">
+                    <a href="forms/publicar_casa.php" class="btn btn-dark fw-bold rounded-pill py-2">
                         Empezar ahora
                     </a>
                     <button class="btn btn-outline-secondary btn-sm rounded-pill mt-2" type="button" data-bs-toggle="collapse" data-bs-target="#consejosAnfitrion">

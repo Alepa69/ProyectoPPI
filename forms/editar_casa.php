@@ -1,13 +1,13 @@
 <?php
-require_once __DIR__ . '/config/sesion.php'; //verificacion que el usuario haya iniciado sesion
-require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php'; //verificacion que el usuario haya iniciado sesion
+require_once __DIR__ . '/../config/conexion.php';
 //garantiza los datos que llama faltan, el script se detenga 
 $idUsuario = (int) $_SESSION['id_usuario'];
 
 // validar id de usuario 
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if (!$id) {
-    header('Location: mis_alojamientos.php');
+    header('Location: ../mis_alojamientos.php');
     exit;
 }
 
@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $conexion->commit();
                 $_SESSION['flash'] = ['tipo' => 'success', 'texto' => 'Cambios guardados correctamente.'];
-                header('Location: mis_alojamientos.php');
+                header('Location: ../mis_alojamientos.php');
                 exit;
             } catch (Throwable $e) {
                 $conexion->rollback();
@@ -148,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $pageTitle = 'Editar: ' . $casa['titulo'];
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -157,7 +157,7 @@ include __DIR__ . '/includes/header.php';
 
         <!-- Botón volver -->
         <div class="mb-3">
-            <a href="mis_alojamientos.php" class="btn btn-outline-secondary rounded-pill btn-sm">
+            <a href="../mis_alojamientos.php" class="btn btn-outline-secondary rounded-pill btn-sm">
                 &larr; Volver a mis alojamientos
             </a>
         </div>
@@ -270,7 +270,7 @@ include __DIR__ . '/includes/header.php';
                     </div>
 
                     <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
-                        <a href="mis_alojamientos.php" class="btn btn-outline-secondary">Cancelar</a>
+                        <a href="../mis_alojamientos.php" class="btn btn-outline-secondary">Cancelar</a>
                         <button type="submit" class="btn btn-primary px-4">Guardar Cambios</button>
                     </div>
                 </form>
@@ -280,6 +280,6 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/js/editar-casa.js"></script>
+<script src="../assets/js/editar-casa.js"></script>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

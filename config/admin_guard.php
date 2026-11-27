@@ -16,7 +16,7 @@ $adminActual = $stmtAdmin->get_result()->fetch_assoc();
 $stmtAdmin->close();
 
 if (!$adminActual || $adminActual['rol'] !== 'administrador' || $adminActual['estado'] !== 'activo') {
-    header('Location: index.php');
+    header('Location: ' . $baseUrl . 'index.php');
     exit;
 }
 

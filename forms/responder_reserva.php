@@ -1,9 +1,9 @@
 <?php
-require_once __DIR__ . '/config/conexion.php';
-require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: panel_anfitrion.php');
+    header('Location: ../panel_anfitrion.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $idUsuario = (int) $_SESSION['id_usuario'];
 $accionesValidas = ['aceptar', 'rechazar', 'cancelar'];
 if ($idReserva <= 0 || !in_array($accion, $accionesValidas, true)) {
     $_SESSION['flash'] = ['tipo' => 'danger', 'texto' => 'Solicitud inválida.'];
-    header('Location: panel_anfitrion.php');
+    header('Location: ../panel_anfitrion.php');
     exit;
 }
 
@@ -141,5 +141,5 @@ try {
     $_SESSION['flash'] = ['tipo' => 'danger', 'texto' => 'No se pudo procesar la solicitud.'];
 }
 
-header('Location: panel_anfitrion.php');
+header('Location: ../panel_anfitrion.php');
 exit;

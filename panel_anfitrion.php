@@ -60,7 +60,7 @@ include __DIR__ . '/includes/header.php';
         </div>
         <h2 class="fw-bold mb-3">No tienes ninguna reserva</h2>
         <p class="text-muted fs-5 mb-4">Para recibir reservas, tendrás<br>que completar y publicar tu anuncio.</p>
-        <a href="publicar_casa.php" class="btn btn-dark rounded-pill px-5 py-2 fw-bold">
+        <a href="forms/publicar_casa.php" class="btn btn-dark rounded-pill px-5 py-2 fw-bold">
             Completa tu anuncio
         </a>
     </div>
@@ -136,20 +136,20 @@ include __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <?php if ($r['estado'] === 'pendiente'): ?>
-                                    <form method="POST" action="responder_reserva.php" class="d-inline">
+                                    <form method="POST" action="forms/responder_reserva.php" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">
                                         <input type="hidden" name="accion" value="aceptar">
                                         <button class="btn btn-sm btn-success">Aceptar</button>
                                     </form>
-                                    <form method="POST" action="responder_reserva.php" class="d-inline">
+                                    <form method="POST" action="forms/responder_reserva.php" class="d-inline">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">
                                         <input type="hidden" name="accion" value="rechazar">
                                         <button class="btn btn-sm btn-outline-secondary">Rechazar</button>
                                     </form>
                                 <?php elseif ($r['estado'] === 'aceptada'): ?>
-                                    <form method="POST" action="responder_reserva.php" class="d-inline"
+                                    <form method="POST" action="forms/responder_reserva.php" class="d-inline"
                                           onsubmit="return confirm('¿Cancelar esta reserva?');">
                                         <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
                                         <input type="hidden" name="id_reserva" value="<?= (int) $r['id_reserva'] ?>">

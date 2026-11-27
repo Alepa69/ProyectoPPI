@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config/sesion.php';
-require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 /**
  * Valida hora en formato HH:MM o HH:MM:SS y la devuelve como HH:MM:SS.
@@ -43,7 +43,7 @@ function procesarImagenesPublicacion(&$errores, &$archivosSubidos)
     if (isset($_FILES['imagenes']) && is_array($_FILES['imagenes']['name'] ?? null)) {
         $extensionesPermitidas = ['jpg', 'jpeg', 'png', 'webp'];
         $pesoMaximo = 5 * 1024 * 1024; // 5 MB
-        $carpetaDestino = __DIR__ . '/uploads/alojamientos';
+        $carpetaDestino = __DIR__ . '/../uploads/alojamientos';
 
         $total = count($_FILES['imagenes']['name']);
         for ($i = 0; $i < $total; $i++) {
@@ -324,7 +324,7 @@ try {
 
     $conexion->commit();
     $_SESSION['flash'] = ['tipo' => 'success', 'texto' => '¡Alojamiento publicado correctamente!'];
-    header('Location: mis_alojamientos.php');
+    header('Location: ../mis_alojamientos.php');
     exit;
 } catch (Throwable $e) {
     $conexion->rollback();

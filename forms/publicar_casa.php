@@ -1,6 +1,6 @@
 <?php
-require_once __DIR__ . '/config/sesion.php';
-require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/../config/sesion.php';
+require_once __DIR__ . '/../config/conexion.php';
 
 $mensajeError = $_SESSION['error_publicacion'] ?? '';
 unset($_SESSION['error_publicacion']);
@@ -36,7 +36,7 @@ $departamentosSV = [
 ];
 
 $pageTitle = 'Publicar alojamiento';
-include __DIR__ . '/includes/header.php';
+include __DIR__ . '/../includes/header.php';
 ?>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -393,7 +393,7 @@ include __DIR__ . '/includes/header.php';
                     <!-- Navegación del Wizard -->
                     <div class="d-flex justify-content-between align-items-center pt-4 mt-4 border-top">
                         <button type="button" class="btn btn-outline-secondary px-4 d-none" id="btnAnterior">← Atrás</button>
-                        <a href="index.php" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Cancelar</a>
+                        <a href="../index.php" class="btn btn-link text-muted text-decoration-none" id="btnCancelar">Cancelar</a>
                         <div class="ms-auto d-flex gap-2">
                             <button type="button" class="btn btn-dark px-4" id="btnSiguiente">Siguiente →</button>
                             <button type="submit" class="btn btn-success px-4 fw-semibold d-none" id="btnPublicar" disabled>🚀 Publicar alojamiento</button>
@@ -406,6 +406,6 @@ include __DIR__ . '/includes/header.php';
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="assets/js/publicar-casa.js"></script>
+<script src="../assets/js/publicar-casa.js"></script>
 
-<?php include __DIR__ . '/includes/footer.php'; ?>
+<?php include __DIR__ . '/../includes/footer.php'; ?>

@@ -49,7 +49,7 @@ include __DIR__ . '/includes/header.php';
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="mb-0">Mis Alojamientos</h2>
-    <a href="publicar_casa.php" class="btn btn-dark rounded-pill px-4">+ Publicar nuevo alojamiento</a>
+    <a href="forms/publicar_casa.php" class="btn btn-dark rounded-pill px-4">+ Publicar nuevo alojamiento</a>
 </div>
 
 <?php if ($flash): ?>
@@ -63,7 +63,7 @@ include __DIR__ . '/includes/header.php';
         <span style="font-size: 5rem;">🏡</span>
         <h3 class="mt-3 fw-bold">No tienes ningún anuncio</h3>
         <p class="text-muted">Comienza a generar ingresos publicando tu primera propiedad en HALOJA.</p>
-        <a href="publicar_casa.php" class="btn btn-dark rounded-pill mt-3 px-4">Completar mi anuncio</a>
+        <a href="forms/publicar_casa.php" class="btn btn-dark rounded-pill mt-3 px-4">Completar mi anuncio</a>
     </div>
 <?php else: ?>
     <div class="row g-4">
@@ -98,7 +98,7 @@ include __DIR__ . '/includes/header.php';
                         <?php if ($casa['estado'] === 'publicado'): ?>
                             <a href="listing.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-dark flex-fill rounded-pill btn-sm">Ver</a>
                         <?php endif; ?>
-                        <a href="editar_casa.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-primary flex-fill rounded-pill btn-sm">Editar</a>
+                        <a href="forms/editar_casa.php?id=<?= (int) $casa['id_alojamiento'] ?>" class="btn btn-outline-primary flex-fill rounded-pill btn-sm">Editar</a>
                         <?php if ($casa['estado'] === 'publicado' || $casa['estado'] === 'inactivo'): ?>
                             <form method="POST" action="mis_alojamientos.php" class="flex-fill d-flex">
                                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">

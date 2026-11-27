@@ -3,9 +3,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+$baseUrl = basename(dirname($_SERVER['SCRIPT_NAME'] ?? '')) === 'forms' ? '../' : '';
+
 $idSesion = (int) ($_SESSION['id_usuario'] ?? 0);
 if ($idSesion <= 0) {
-    header('Location: login.php');
+    header('Location: ' . $baseUrl . 'login.php');
     exit;
 }
 
@@ -20,7 +22,7 @@ $stmtSesion->close();
 
 if (!$cuentaSesion || $cuentaSesion['estado'] !== 'activo') {
     $_SESSION = [];
-    header('Location: login.php?suspendido=1');
+    header('Location: ' . $baseUrl . 'login.php?suspendido=1');
     exit;
 }
 

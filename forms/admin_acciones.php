@@ -1,15 +1,15 @@
 <?php
-require_once __DIR__ . '/config/admin_guard.php';
+require_once __DIR__ . '/../config/admin_guard.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: admin.php');
+    header('Location: ../admin.php');
     exit;
 }
 
 $token = (string) ($_POST['csrf'] ?? '');
 if (!hash_equals($_SESSION['csrf_admin'], $token)) {
     $_SESSION['admin_flash'] = ['tipo' => 'danger', 'mensaje' => 'Sesión de formulario inválida. Intenta nuevamente.'];
-    header('Location: admin.php');
+    header('Location: ../admin.php');
     exit;
 }
 
@@ -26,7 +26,7 @@ if (!preg_match('/^(admin\.php(\?tab=(usuarios|alojamientos))?|listing\.php\?id=
 
 if (!$id || !in_array($tipo, ['usuario', 'alojamiento'], true) || !in_array($accion, ['suspender', 'activar', 'eliminar'], true)) {
     $_SESSION['admin_flash'] = ['tipo' => 'danger', 'mensaje' => 'Parámetros o acción no válidos.'];
-    header('Location: ' . $volverA);
+    header('Location: ../' . $volverA);
     exit;
 }
 
@@ -148,5 +148,5 @@ try {
     $_SESSION['admin_flash'] = ['tipo' => 'danger', 'mensaje' => 'No se pudo completar la acción: ' . $e->getMessage()];
 }
 
-header('Location: ' . $volverA, true, 303);
+header('Location: ../' . $volverA, true, 303);
 exit;
