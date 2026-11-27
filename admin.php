@@ -284,25 +284,6 @@ include __DIR__ . '/includes/header.php';
     </div>
 </div>
 
-<script>
-function bloquearPublicacion(form) {
-    const motivo = prompt('Indica el motivo de la suspensión/bloqueo (opcional):', 'Incumplimiento de normas de la plataforma');
-    if (motivo === null) return;
-
-    const inputAccion = document.createElement('input');
-    inputAccion.type = 'hidden';
-    inputAccion.name = 'accion';
-    inputAccion.value = 'suspender';
-
-    const inputMotivo = document.createElement('input');
-    inputMotivo.type = 'hidden';
-    inputMotivo.name = 'motivo';
-    inputMotivo.value = motivo.trim();
-
-    form.appendChild(inputAccion);
-    form.appendChild(inputMotivo);
-    form.submit();
-}
-</script>
+<script src="assets/js/admin.js"></script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>

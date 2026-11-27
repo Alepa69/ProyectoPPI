@@ -141,40 +141,6 @@ require_once __DIR__ . '/includes/header.php';
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-const btnVerClaves = document.getElementById('btnVerClaves');
-const regClave = document.getElementById('regClave');
-const regClave2 = document.getElementById('regClave2');
-let timerVerClaves = null;
-
-if (btnVerClaves && regClave && regClave2) {
-    btnVerClaves.addEventListener('click', function () {
-        const ocultas = regClave.type === 'password';
-        if (timerVerClaves) clearTimeout(timerVerClaves);
-
-        if (ocultas) {
-            regClave.type = 'text';
-            regClave2.type = 'text';
-            btnVerClaves.innerHTML = '<i class="bi bi-eye-slash"></i> Ocultar contraseñas';
-            timerVerClaves = setTimeout(function () {
-                regClave.type = 'password';
-                regClave2.type = 'password';
-                btnVerClaves.innerHTML = '<i class="bi bi-eye"></i> Ver ambas contraseñas (3 s)';
-            }, 3000);
-        } else {
-            regClave.type = 'password';
-            regClave2.type = 'password';
-            btnVerClaves.innerHTML = '<i class="bi bi-eye"></i> Ver ambas contraseñas (3 s)';
-        }
-    });
-}
-</script>
-
-<?php if ($registroExitoso): ?>
-<script>
-    var modal = new bootstrap.Modal(document.getElementById('modalExito'));
-    modal.show();
-</script>
-<?php endif; ?>
+<script src="assets/js/auth.js"></script>
 </body>
 </html>

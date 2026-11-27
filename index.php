@@ -282,48 +282,13 @@ $heroImagen = 'assets/img/ilopango.jpg';
         <?php endforeach; ?>
       </aside>
 
-      <div id="map" style="height: 420px;"></div>
+      <div id="map"
+           style="height: 420px;"
+           data-lat="<?= $mapLat ?>"
+           data-lng="<?= $mapLng ?>"
+           data-casas="<?= htmlspecialchars(json_encode($casas), ENT_QUOTES, 'UTF-8') ?>"></div>
     </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-    const casas = <?= json_encode($casas) ?>;
-    const map = L.map('map').setView([<?= $mapLat ?>, <?= $mapLng ?>], 12);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-
-    casas.forEach(c => {
-        if (c.latitud === null || c.longitud === null || c.latitud === '' || c.longitud === '') return;
-        const lat = parseFloat(c.latitud);
-        const lng = parseFloat(c.longitud);
-        if (Number.isNaN(lat) || Number.isNaN(lng)) return;
-
-        const popup = document.createElement('div');
-        popup.style.width = '190px';
-
-        const img = document.createElement('img');
-        img.src = c.foto_principal;
-        img.alt = c.titulo;
-        img.style.width = '100%';
-        img.style.height = '105px';
-        img.style.objectFit = 'cover';
-        img.style.borderRadius = '8px';
-        img.style.marginBottom = '6px';
-        popup.appendChild(img);
-
-        const link = document.createElement('a');
-        link.href = 'listing.php?id=' + encodeURIComponent(c.id_alojamiento);
-        link.textContent = c.titulo;
-        link.style.display = 'block';
-        popup.appendChild(link);
-
-        const precio = document.createElement('span');
-        precio.textContent = '$' + Number(c.precio_persona_noche).toFixed(2) + ' / persona · noche';
-        precio.style.fontSize = '0.82rem';
-        precio.style.color = '#495057';
-        popup.appendChild(precio);
-
-        L.marker([lat, lng]).addTo(map).bindPopup(popup);
-    });
-</script>
+<script src="assets/js/mapa-inicio.js"></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>

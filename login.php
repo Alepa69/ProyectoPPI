@@ -110,27 +110,6 @@ require_once __DIR__ . '/includes/header.php';
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-const btnVerLogin = document.getElementById('btnVerLoginClave');
-const loginClave = document.getElementById('loginClave');
-let timerLogin = null;
-
-if (btnVerLogin && loginClave) {
-    btnVerLogin.addEventListener('click', function () {
-        if (timerLogin) clearTimeout(timerLogin);
-        if (loginClave.type === 'password') {
-            loginClave.type = 'text';
-            btnVerLogin.innerHTML = '<i class="bi bi-eye-slash"></i>';
-            timerLogin = setTimeout(function () {
-                loginClave.type = 'password';
-                btnVerLogin.innerHTML = '<i class="bi bi-eye"></i>';
-            }, 3000);
-        } else {
-            loginClave.type = 'password';
-            btnVerLogin.innerHTML = '<i class="bi bi-eye"></i>';
-        }
-    });
-}
-</script>
+<script src="assets/js/auth.js"></script>
 </body>
 </html>

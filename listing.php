@@ -512,7 +512,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <p class="listing-login-note">Este alojamiento pertenece a tu cuenta.</p>
                         <a href="editar_casa.php?id=<?= (int) $id ?>" class="btn btn-outline-success w-100 mt-2">Editar mi publicación</a>
                     <?php else: ?>
-                        <form method="post" action="listing.php?id=<?= (int) $id ?>" class="listing-booking-form">
+                        <form method="post" action="listing.php?id=<?= (int) $id ?>" class="listing-booking-form"
+                              data-precio="<?= escapar($precioPorPersonaNoche) ?>"
+                              data-estancia-minima="<?= (int) max(1, (int) $casa['estancia_minima']) ?>">
                             <input type="hidden" name="csrf" value="<?= escapar($_SESSION['csrf_reserva']) ?>">
                             <label for="entrada" class="form-label">Fecha de entrada</label>
                             <input type="date" name="entrada" id="entrada" class="form-control" min="<?= $hoy->format('Y-m-d') ?>" required>
@@ -564,97 +566,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <?php endif; ?>
 
 <script src="assets/js/bootstrap.bundle.min.js"></script>
-<script>
-    // Visor de fotografías
-    const galleryModalElement = document.getElementById('listingGalleryModal');
-    const photoCarouselElement = document.getElementById('listingPhotoCarousel');
-
-    if (galleryModalElement && photoCarouselElement && window.bootstrap) {
-        const galleryModal = bootstrap.Modal.getOrCreateInstance(galleryModalElement);
-        const carouselItems = Array.from(photoCarouselElement.querySelectorAll('.carousel-item'));
-
-        document.querySelectorAll('[data-gallery-index]').forEach(function (button) {
-            button.addEventListener('click', function () {
-                const selectedIndex = Number(button.dataset.galleryIndex || 0);
-                carouselItems.forEach(function (item, index) {
-                    item.classList.toggle('active', index === selectedIndex);
-                });
-                galleryModal.show();
-            });
-        });
-    }
-
-    // Cálculo en vivo del importe estimado (noches x huéspedes x precio)
-    const inputEntrada = document.getElementById('entrada');
-    const inputSalida = document.getElementById('salida');
-    const inputHuespedes = document.getElementById('huespedes');
-    const resumenCalculo = document.getElementById('resumenCalculo');
-    const precioPersonaNoche = <?= json_encode($precioPorPersonaNoche) ?>;
-    const estanciaMinima = <?= (int) max(1, (int) $casa['estancia_minima']) ?>;
-
-    function actualizarCalculo() {
-        if (!inputEntrada || !inputSalida || !inputHuespedes || !resumenCalculo) return;
-        if (!inputEntrada.value || !inputSalida.value) {
-            resumenCalculo.classList.add('d-none');
-            return;
-        }
-        const f1 = new Date(inputEntrada.value + 'T00:00:00');
-        const f2 = new Date(inputSalida.value + 'T00:00:00');
-        const noches = Math.round((f2 - f1) / (1000 * 60 * 60 * 24));
-        const huespedes = parseInt(inputHuespedes.value || '1', 10);
-
-        if (noches > 0 && huespedes > 0) {
-            const total = (noches * huespedes * precioPersonaNoche).toFixed(2);
-            resumenCalculo.innerHTML = noches + ' noche(s) × ' + huespedes + ' huésped(es) × $' +
-                precioPersonaNoche.toFixed(2) + ' = <strong>$' + total + ' USD</strong>';
-            resumenCalculo.classList.remove('d-none');
-        } else {
-            resumenCalculo.classList.add('d-none');
-        }
-    }
-
-    if (inputEntrada && inputSalida) {
-        inputEntrada.addEventListener('change', function () {
-            if (this.value) {
-                const fechaMinSalida = new Date(this.value + 'T00:00:00');
-                fechaMinSalida.setDate(fechaMinSalida.getDate() + estanciaMinima);
-                const minStr = fechaMinSalida.getFullYear() + '-'
-                    + String(fechaMinSalida.getMonth() + 1).padStart(2, '0') + '-'
-                    + String(fechaMinSalida.getDate()).padStart(2, '0');
-                inputSalida.min = minStr;
-
-                if (inputSalida.value && inputSalida.value < minStr) {
-                    inputSalida.value = minStr;
-                }
-            }
-            actualizarCalculo();
-        });
-        inputSalida.addEventListener('change', actualizarCalculo);
-        if (inputHuespedes) {
-            inputHuespedes.addEventListener('input', actualizarCalculo);
-        }
-    }
-
-    <?php if ($esAdmin): ?>
-    function bloquearPublicacion(form) {
-        const motivo = prompt('Indica el motivo de la desactivación/bloqueo (opcional):', 'Incumplimiento de normas de la plataforma');
-        if (motivo === null) return;
-
-        const inputAccion = document.createElement('input');
-        inputAccion.type = 'hidden';
-        inputAccion.name = 'accion';
-        inputAccion.value = 'suspender';
-
-        const inputMotivo = document.createElement('input');
-        inputMotivo.type = 'hidden';
-        inputMotivo.name = 'motivo';
-        inputMotivo.value = motivo.trim();
-
-        form.appendChild(inputAccion);
-        form.appendChild(inputMotivo);
-        form.submit();
-    }
-    <?php endif; ?>
-</script>
+<script src="assets/js/listing.js"></script>
+<?php if ($esAdmin): ?>
+<script src="assets/js/admin.js"></script>
+<?php endif; ?>
 </body>
 </html>

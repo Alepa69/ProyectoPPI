@@ -130,12 +130,6 @@ include __DIR__ . '/includes/header.php';
     </div>
 <?php endif; ?>
 
-<script>
-    // Scrollea hasta el último mensaje
-    const caja = document.getElementById('caja-mensajes');
-    if (caja) {
-        caja.scrollTop = caja.scrollHeight;
-    }
-</script>
+<script src="assets/js/chat.js"></script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
