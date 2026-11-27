@@ -14,6 +14,9 @@ if (empty($_SESSION['csrf_auth'])) {
 }
 
 require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/dao/UsuarioDAO.php';
+
+$usuarioDao = new UsuarioDAO($conexion);
 $mensaje="";
 $registroExitoso = false;
 $nombre = "";
@@ -40,33 +43,21 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         } elseif (strlen($clave) < 8 || !preg_match('/[A-Z]/', $clave) || !preg_match('/[0-9]/', $clave)) {
             $mensaje = "<div class='alert alert-warning'>La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.</div>";
         } else {
-            //encriptado
             $contraEncriptada = password_hash($clave, PASSWORD_DEFAULT);
 
-            $sql="insert into
-            usuarios (nombre, apellido, correo, password_hash)
-            values(?, ?, ?, ?)";
-
-            $stmt =$conexion->prepare($sql);
-            $stmt->bind_param("ssss", $nombre, $apellido, $correo, $contraEncriptada);
-
             try {
-                if ($stmt->execute()) {
+                if ($usuarioDao->registrar($nombre, $apellido, $correo, $contraEncriptada)) {
                     $registroExitoso = true;
                     $nombre = "";
                     $apellido = "";
                     $correo = "";
                 }
             } catch (mysqli_sql_exception $e) {
-                
-            //errores cuenta ya existe
                 if ($e->getCode()===1062) {
                     $mensaje = "<div class='alert alert-danger'>Este correo ya esta en uso</div>";
                 } else {
                     $mensaje = "<div class='alert alert-danger'>Error al crear la cuenta.</div>";
                 }
-            
-            $stmt->close();
             }
         }
     } else {

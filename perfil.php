@@ -1,42 +1,14 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/dao/UsuarioDAO.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
+$usuarioDao = new UsuarioDAO($conexion);
 
-// 1. Obtener datos del usuario (incluyendo teléfono, biografía y foto)
-$stmt = $conexion->prepare("SELECT nombre, apellido, correo, telefono, biografia, foto_perfil, rol, estado, creado_en FROM usuarios WHERE id_usuario = ?");
-$stmt->bind_param('i', $idUsuario);
-$stmt->execute();
-$usuario = $stmt->get_result()->fetch_assoc();
-
-// 2. Obtener estadísticas de Huésped
-$stmt = $conexion->prepare("
-    SELECT estado, COUNT(*) as total
-    FROM reservas
-    WHERE id_solicitante = ?
-    GROUP BY estado
-");
-$stmt->bind_param('i', $idUsuario);
-$stmt->execute();
-$reservasCliente = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-
-$statsCliente = ['pendiente' => 0, 'aceptada' => 0, 'rechazada' => 0, 'cancelada' => 0];
-foreach ($reservasCliente as $r) {
-    $statsCliente[$r['estado']] = $r['total'];
-}
-
-// 3. Obtener estadísticas de Anfitrión
-$stmt = $conexion->prepare("
-    SELECT COUNT(DISTINCT a.id_alojamiento) as total_alojamientos,
-           COUNT(r.id_reserva) as total_reservas
-    FROM alojamientos a
-    LEFT JOIN reservas r ON r.id_alojamiento = a.id_alojamiento
-    WHERE a.id_anfitrion = ?
-");
-$stmt->bind_param('i', $idUsuario);
-$stmt->execute();
-$statsAnfitrion = $stmt->get_result()->fetch_assoc();
+$usuario = $usuarioDao->obtenerPorId($idUsuario);
+$statsCliente = $usuarioDao->obtenerEstadisticasHuesped($idUsuario);
+$statsAnfitrion = $usuarioDao->obtenerEstadisticasAnfitrion($idUsuario);
 $esAnfitrion = (int) $statsAnfitrion['total_alojamientos'] > 0;
 
 $flash = $_SESSION['perfil_flash'] ?? '';

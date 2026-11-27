@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/dao/UsuarioDAO.php';
 
 $id = (int) filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 if ($id <= 0) {
@@ -7,17 +8,8 @@ if ($id <= 0) {
     exit('Perfil de anfitrión no encontrado.');
 }
 
-$stmt = $conexion->prepare("
-    SELECT u.nombre, u.apellido, u.biografia, u.foto_perfil, u.creado_en,
-           a.id_alojamiento, a.titulo, COALESCE(NULLIF(a.ciudad, ''), a.municipio) AS municipio, a.departamento
-    FROM usuarios u
-    JOIN alojamientos a ON a.id_anfitrion = u.id_usuario
-    WHERE u.id_usuario = ? AND u.estado = 'activo' AND a.estado = 'publicado'
-    ORDER BY a.creado_en DESC
-");
-$stmt->bind_param('i', $id);
-$stmt->execute();
-$anuncios = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$usuarioDao = new UsuarioDAO($conexion);
+$anuncios = $usuarioDao->obtenerPerfilPublicoAnfitrion($id);
 
 if (!$anuncios) {
     http_response_code(404);

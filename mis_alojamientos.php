@@ -1,11 +1,13 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/dao/AlojamientoDAO.php';
 
 // Forzar modo anfitrión
 $_SESSION['modo'] = 'anfitrion';
 
 $idAnfitrion = (int) $_SESSION['id_usuario'];
+$alojamientoDao = new AlojamientoDAO($conexion);
 
 // Procesar activación / desactivación del alojamiento propio
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -15,18 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nuevoEstado = ($_POST['nuevo_estado'] ?? '') === 'inactivo' ? 'inactivo' : 'publicado';
 
     if ($idAlojamiento > 0) {
-        // Solo se permite cambiar entre publicado e inactivo (no si está bloqueado por admin)
-        $stmtEstado = $conexion->prepare("
-            UPDATE alojamientos
-            SET estado = ?
-            WHERE id_alojamiento = ?
-              AND id_anfitrion = ?
-              AND estado IN ('publicado', 'inactivo')
-        ");
-        $stmtEstado->bind_param('sii', $nuevoEstado, $idAlojamiento, $idAnfitrion);
-        $stmtEstado->execute();
-
-        if ($stmtEstado->affected_rows === 1) {
+        if ($alojamientoDao->cambiarEstadoPropio($idAlojamiento, $idAnfitrion, $nuevoEstado)) {
             $texto = $nuevoEstado === 'inactivo'
                 ? 'Alojamiento desactivado. Ya no aparece en el catálogo.'
                 : 'Alojamiento publicado nuevamente en el catálogo.';
@@ -40,35 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-$stmt = $conexion->prepare("
-    SELECT a.id_alojamiento, a.titulo,
-           COALESCE(NULLIF(a.ciudad, ''), a.municipio) AS municipio,
-           a.departamento,
-           COALESCE(NULLIF(a.precio_noche, 0), a.precio_persona_noche) AS precio_persona_noche,
-           a.estado, a.motivo_bloqueo,
-           COALESCE(
-               (SELECT ai.ruta_o_url
-                FROM alojamiento_imagenes ai
-                WHERE ai.alojamiento_id = a.id_alojamiento
-                  AND ai.es_portada = 1
-                ORDER BY ai.orden ASC, ai.id ASC
-                LIMIT 1),
-               (SELECT ai2.ruta_o_url
-                FROM alojamiento_imagenes ai2
-                WHERE ai2.alojamiento_id = a.id_alojamiento
-                ORDER BY ai2.orden ASC, ai2.id ASC
-                LIMIT 1),
-               f.ruta_archivo,
-               'https://picsum.photos/seed/casa/400/220'
-           ) AS foto_principal
-    FROM alojamientos a
-    LEFT JOIN fotos_alojamiento f ON a.id_alojamiento = f.id_alojamiento AND f.posicion = 1
-    WHERE a.id_anfitrion = ?
-    ORDER BY a.creado_en DESC
-");
-$stmt->bind_param('i', $idAnfitrion);
-$stmt->execute();
-$alojamientos = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+$alojamientos = $alojamientoDao->listarPorAnfitrion($idAnfitrion);
 
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);

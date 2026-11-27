@@ -1,25 +1,17 @@
 <?php
 require_once __DIR__ . '/config/conexion.php';
 require_once __DIR__ . '/config/sesion.php';
+require_once __DIR__ . '/dao/ChatDAO.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 $idReserva = (int) ($_GET['id_reserva'] ?? 0);
 
-if ($idReserva<=0) {
+if ($idReserva <= 0) {
     exit('Reserva no valida');
 }
 
-//buscar cliente y anfitrion de la reserva
-$sqlReserva = "SELECT r.id_reserva, r.id_solicitante, r.estado,
-                      a.titulo as alojamiento, a.id_anfitrion
-               from reservas r
-               join alojamientos a on a.id_alojamiento = r.id_alojamiento
-               where r.id_reserva = ?";
-
-$stmt = $conexion->prepare($sqlReserva);
-$stmt->bind_param('i', $idReserva);
-$stmt->execute();
-$reserva = $stmt->get_result()->fetch_assoc();
+$chatDao = new ChatDAO($conexion);
+$reserva = $chatDao->obtenerReservaParaChat($idReserva);
 
 //reserva no existe o no es del usuario
 if (!$reserva) {
@@ -39,7 +31,7 @@ $chatActivo = in_array($reserva['estado'], ['pendiente', 'aceptada'], true);
 $errorChat = '';
 
 //guarda el mensaje
-if ($_SERVER['REQUEST_METHOD']==='POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     verificar_csrf();
     $texto = trim($_POST['mensaje'] ?? '');
 
@@ -50,26 +42,13 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     } elseif (mb_strlen($texto) > 1000) {
         $errorChat = 'El mensaje no puede superar los 1000 caracteres.';
     } else {
-        $sqlInsert = "INSERT INTO mensajes (id_reserva, id_emisor, mensaje) VALUES (?, ?, ?)";
-        $stmtInsert = $conexion->prepare($sqlInsert);
-        $stmtInsert->bind_param('iis', $idReserva, $idUsuario, $texto);
-        $stmtInsert->execute();
+        $chatDao->enviarMensaje($idReserva, $idUsuario, $texto);
         header('Location: chat.php?id_reserva=' . $idReserva);
         exit;
     }
 }
 
-//consulta los mensajes en orden
-$sqlMensajes="SELECT m.id_emisor,m.mensaje, m.creado_en,u.nombre, u.apellido
-                from mensajes m
-                join usuarios u on u.id_usuario=m.id_emisor
-                where m.id_reserva=?
-                order by m.creado_en ASC";
-
-$stmtMsg=$conexion->prepare($sqlMensajes);
-$stmtMsg->bind_param('i', $idReserva);
-$stmtMsg->execute();
-$mensajes=$stmtMsg->get_result()->fetch_all(MYSQLI_ASSOC);
+$mensajes = $chatDao->listarMensajes($idReserva);
 
 //para que te regresa al panel en el que estabas
 $urlVolver=$esCliente?'panel_cliente.php':'panel_anfitrion.php';
