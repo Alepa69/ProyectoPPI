@@ -112,10 +112,21 @@ function enviarCodigoVerificacion(string $correoDestino, string $nombreDestino, 
     }
 
     if ($httpCode < 200 || $httpCode >= 300) {
+        $datosError = json_decode($respuesta, true);
+        $detalle = trim((string) ($datosError['message'] ?? ''));
+
+        if ($detalle !== '' && stripos($detalle, 'unrecognised IP') !== false) {
+            return [
+                'ok' => false,
+                'simulado' => false,
+                'mensaje' => 'Brevo bloqueó la IP de este equipo/servidor (HTTP 401). Entra a Brevo → Security → Authorised IPs y agrega tu IP o desactiva esa restricción.'
+            ];
+        }
+
         return [
             'ok' => false,
             'simulado' => false,
-            'mensaje' => 'El servicio de correo rechazó el envío (HTTP ' . $httpCode . '). Revisa tu API key y remitente verificado.'
+            'mensaje' => 'El servicio de correo rechazó el envío (HTTP ' . $httpCode . ').' . ($detalle !== '' ? ' Detalle: ' . $detalle : ' Revisa tu API key y remitente verificado.')
         ];
     }
 
