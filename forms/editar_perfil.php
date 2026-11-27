@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/conexion.php';
 require_once __DIR__ . '/../config/sesion.php';
+require_once __DIR__ . '/../config/imagenes.php';
 
 $idUsuario = (int) $_SESSION['id_usuario'];
 $error = '';
@@ -74,16 +75,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'Usa una foto JPG, PNG o WEBP válida.';
         } else {
             $carpeta = __DIR__ . '/../uploads/perfiles';
-            if (!is_dir($carpeta)) {
-                mkdir($carpeta, 0755, true);
-            }
-            $nombreNuevo = uniqid('perfil_', true) . '.' . $ext;
-            $rutaRelativa = 'uploads/perfiles/' . $nombreNuevo;
-            $rutaAbsoluta = __DIR__ . '/../' . $rutaRelativa;
+            $resultadoImg = optimizarYGuardarImagen($archivo['tmp_name'], $carpeta, 'perfil_', $ext, 400, 400, 82);
 
-            if (!move_uploaded_file($archivo['tmp_name'], $rutaAbsoluta)) {
-                $error = 'No se pudo guardar la foto de perfil en el servidor.';
+            if (!$resultadoImg['ok']) {
+                $error = $resultadoImg['error'];
             } else {
+                $rutaRelativa = 'uploads/perfiles/' . $resultadoImg['archivo'];
+                $rutaAbsoluta = $carpeta . '/' . $resultadoImg['archivo'];
                 $fotoGuardar = $rutaRelativa;
                 $rutaArchivoNuevo = $rutaAbsoluta;
             }

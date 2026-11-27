@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/sesion.php';
 require_once __DIR__ . '/../config/conexion.php';
+require_once __DIR__ . '/../config/imagenes.php';
 
 /**
  * Valida hora en formato HH:MM o HH:MM:SS y la devuelve como HH:MM:SS.
@@ -75,17 +76,14 @@ function procesarImagenesPublicacion(&$errores, &$archivosSubidos)
                 continue;
             }
 
-            if (!is_dir($carpetaDestino)) {
-                mkdir($carpetaDestino, 0755, true);
-            }
-
-            $nombreNuevo = uniqid('aloj_', true) . '.' . $ext;
-            $rutaAbsoluta = $carpetaDestino . '/' . $nombreNuevo;
-
-            if (!move_uploaded_file($tmpPath, $rutaAbsoluta)) {
-                $errores[] = "No se pudo guardar la imagen {$nombreOriginal}.";
+            $resultadoImg = optimizarYGuardarImagen($tmpPath, $carpetaDestino, 'aloj_', $ext, 1280, 1280, 82);
+            if (!$resultadoImg['ok']) {
+                $errores[] = "No se pudo guardar la imagen {$nombreOriginal}: " . $resultadoImg['error'];
                 continue;
             }
+
+            $nombreNuevo = $resultadoImg['archivo'];
+            $rutaAbsoluta = $carpetaDestino . '/' . $nombreNuevo;
 
             $archivosSubidos[] = $rutaAbsoluta;
             $imagenes[] = 'uploads/alojamientos/' . $nombreNuevo;

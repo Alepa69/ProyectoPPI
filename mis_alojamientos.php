@@ -78,7 +78,7 @@ include __DIR__ . '/includes/header.php';
             ?>
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm border-0 rounded-4 overflow-hidden">
-                    <img src="<?= htmlspecialchars($casa['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 200px;" loading="lazy" alt="Foto de <?= htmlspecialchars($casa['titulo']) ?>">
+                    <img src="<?= htmlspecialchars($casa['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 200px;" loading="lazy" decoding="async" alt="Foto de <?= htmlspecialchars($casa['titulo']) ?>">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2 gap-2">
                             <h5 class="card-title fw-bold mb-0"><?= htmlspecialchars($casa['titulo']) ?></h5>
