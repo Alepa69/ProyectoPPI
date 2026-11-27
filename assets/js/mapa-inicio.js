@@ -1,13 +1,19 @@
 // Mapa interactivo del catálogo principal (index.php)
 const mapEl = document.getElementById('map');
+let mapaInicio;
 
 if (mapEl && window.L) {
     const mapLat = parseFloat(mapEl.dataset.lat) || 13.69;
     const mapLng = parseFloat(mapEl.dataset.lng) || -89.23;
     const casas = JSON.parse(mapEl.dataset.casas || '[]');
 
-    const map = L.map('map').setView([mapLat, mapLng], 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    mapaInicio = L.map('map').setView([mapLat, mapLng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(mapaInicio);
+    agregarCasasAlMapa(casas);
+}
+
+function agregarCasasAlMapa(casas) {
+    if (!mapaInicio) return;
 
     casas.forEach(function (c) {
         if (c.latitud === null || c.longitud === null || c.latitud === '' || c.longitud === '') return;
@@ -40,6 +46,6 @@ if (mapEl && window.L) {
         precio.style.color = '#495057';
         popup.appendChild(precio);
 
-        L.marker([lat, lng]).addTo(map).bindPopup(popup);
+        L.marker([lat, lng]).addTo(mapaInicio).bindPopup(popup);
     });
 }

@@ -154,20 +154,48 @@ if ($precioMaxValido !== null) {
 }
 
 if ($orden === 'precio_asc') {
-    $sql .= " ORDER BY precio_persona_noche ASC";
+    $sql .= " ORDER BY precio_persona_noche ASC, a.id_alojamiento DESC";
 } elseif ($orden === 'precio_desc') {
-    $sql .= " ORDER BY precio_persona_noche DESC";
+    $sql .= " ORDER BY precio_persona_noche DESC, a.id_alojamiento DESC";
 } else {
-    $sql .= " ORDER BY a.creado_en DESC";
+    $sql .= " ORDER BY a.creado_en DESC, a.id_alojamiento DESC";
 }
 
-$stmt = $conexion->prepare($sql);
-if (!empty($params)) {
-    $stmt->bind_param($types, ...$params);
+$cargarMas = ($_GET['cargar_mas'] ?? '') === '1';
+$cantidad = 3;
+$desde = 0;
+if ($cargarMas) {
+    $cantidad = max(1, min(12, (int) ($_GET['cantidad'] ?? 3)));
+    $desde = max(0, (int) ($_GET['desde'] ?? 0));
 }
+
+// Pedimos una casa extra para saber si todavía quedan más.
+$sql .= " LIMIT ? OFFSET ?";
+$params[] = $cantidad + 1;
+$params[] = $desde;
+$types .= 'ii';
+
+$stmt = $conexion->prepare($sql);
+$stmt->bind_param($types, ...$params);
 $stmt->execute();
 $resultado = $stmt->get_result();
 $casas = $resultado->fetch_all(MYSQLI_ASSOC);
+$hayMas = count($casas) > $cantidad;
+if ($hayMas) {
+    array_pop($casas);
+}
+
+if ($cargarMas) {
+    // Usamos las mismas tarjetas que se muestran al abrir el index.
+    ob_start();
+    include __DIR__ . '/includes/tarjetas-inicio.php';
+    $tarjetas = ob_get_clean();
+
+    header('Content-Type: application/json; charset=UTF-8');
+    echo json_encode(['tarjetas' => $tarjetas, 'casas' => $casas, 'hayMas' => $hayMas]);
+    exit;
+}
+
 $pageTitle = 'Menú principal';
 $heroImagen = 'assets/img/ilopango.jpg';
 ?>
@@ -261,26 +289,19 @@ $heroImagen = 'assets/img/ilopango.jpg';
       <?php if ($errorFiltro !== ''): ?>
         <div class="alert alert-warning"><?= htmlspecialchars($errorFiltro) ?></div>
       <?php endif; ?>
-      <aside>
-        <?php if (count($casas) === 0): ?>
+      <?php if (count($casas) === 0): ?>
         <p class="text-muted">No se han encontrado alojamientos disponibles con esos filtros.</p>
-        <?php endif; ?>
-
-        <?php foreach ($casas as $p): ?>
-          <div class="card border shadow-sm mb-3 overflow-hidden">
-                <img src="<?= htmlspecialchars($p['foto_principal']) ?>" class="card-img-top object-fit-cover" style="height: 180px;" loading="lazy" alt="Foto de <?= htmlspecialchars($p['titulo']) ?>">
-                <div class="card-body">
-                    <h3 class="h6 fw-bold mb-1 text-dark"><?= htmlspecialchars($p['titulo']) ?></h3>
-                    <p class="text-muted small mb-2"><?= htmlspecialchars($p['municipio']) ?>, <?= htmlspecialchars($p['departamento']) ?> · Hasta <?= (int) $p['capacidad'] ?> huéspedes</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="fw-bold text-primary">$<?= number_format((float) $p['precio_persona_noche'], 2) ?> <small class="text-muted fw-normal">/ persona · noche</small></span>
-                    </div>
-                    <span class="text-muted small d-block mt-2 mb-3">Anfitrión: <?= htmlspecialchars($p['anfitrion_nombre']) ?></span>
-                    <a href="listing.php?id=<?= (int) $p['id_alojamiento'] ?>" class="btn btn-outline-success btn-sm">Ver detalles</a>
-                </div>
-            </div>
-        <?php endforeach; ?>
+      <?php endif; ?>
+      <aside id="lista-alojamientos">
+        <?php include __DIR__ . '/includes/tarjetas-inicio.php'; ?>
       </aside>
+
+      <?php if ($hayMas): ?>
+        <div class="text-center">
+          <button type="button" id="mostrar-mas" class="btn btn-outline-success" aria-controls="lista-alojamientos" hidden>Mostrar más</button>
+          <p id="mensaje-alojamientos" class="text-danger mt-2 mb-0" role="status"></p>
+        </div>
+      <?php endif; ?>
 
       <div id="map"
            style="height: 420px;"
@@ -291,4 +312,5 @@ $heroImagen = 'assets/img/ilopango.jpg';
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="assets/js/mapa-inicio.js"></script>
+<script src="assets/js/alojamientos-inicio.js"></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>
