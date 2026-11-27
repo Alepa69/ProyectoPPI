@@ -1,6 +1,8 @@
 # Configuraciones locales
 /config/base.remote.php
 /config/base.local.php
+/config/correo.remote.php
+/config/correo.local.php
 
 # Archivos temporales
 *.log

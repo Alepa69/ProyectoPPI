@@ -14,11 +14,17 @@ if (empty($_SESSION['csrf_auth'])) {
 }
 
 require_once __DIR__ . '/config/conexion.php';
+require_once __DIR__ . '/config/correo.php';
 require_once __DIR__ . '/dao/UsuarioDAO.php';
+
+if (isset($_GET['cancelar'])) {
+    unset($_SESSION['registro_pendiente']);
+    header("Location: registro.php");
+    exit();
+}
 
 $usuarioDao = new UsuarioDAO($conexion);
 $mensaje="";
-$registroExitoso = false;
 $nombre = "";
 $apellido = "";
 $correo = "";
@@ -42,23 +48,30 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $mensaje = "<div class='alert alert-warning'>Las contraseñas no coinciden.</div>";
         } elseif (strlen($clave) < 8 || !preg_match('/[A-Z]/', $clave) || !preg_match('/[0-9]/', $clave)) {
             $mensaje = "<div class='alert alert-warning'>La contraseña debe tener al menos 8 caracteres, una mayúscula y un número.</div>";
+        } elseif ($usuarioDao->buscarPorCorreo($correo)) {
+            $mensaje = "<div class='alert alert-danger'>Este correo ya esta en uso</div>";
         } else {
-            $contraEncriptada = password_hash($clave, PASSWORD_DEFAULT);
+            $codigo = (string) random_int(100000, 999999);
+            $envio = enviarCodigoVerificacion($correo, $nombre, $codigo);
 
-            try {
-                if ($usuarioDao->registrar($nombre, $apellido, $correo, $contraEncriptada)) {
-                    $registroExitoso = true;
-                    $nombre = "";
-                    $apellido = "";
-                    $correo = "";
-                }
-            } catch (mysqli_sql_exception $e) {
-                if ($e->getCode()===1062) {
-                    $mensaje = "<div class='alert alert-danger'>Este correo ya esta en uso</div>";
-                } else {
-                    $mensaje = "<div class='alert alert-danger'>Error al crear la cuenta.</div>";
-                }
+            if ($envio['ok']) {
+                $_SESSION['registro_pendiente'] = [
+                    'nombre' => $nombre,
+                    'apellido' => $apellido,
+                    'correo' => $correo,
+                    'password_hash' => password_hash($clave, PASSWORD_DEFAULT),
+                    'codigo' => $codigo,
+                    'expira' => time() + 600,
+                    'intentos' => 0,
+                    'ultimo_envio' => time(),
+                    'codigo_simulado' => !empty($envio['simulado']) ? $codigo : null,
+                ];
+
+                header("Location: forms/verificar_correo.php");
+                exit();
             }
+
+            $mensaje = "<div class='alert alert-danger'>" . htmlspecialchars($envio['mensaje']) . "</div>";
         }
     } else {
         $mensaje = "<div class='alert alert-warning'>Por favor completa todos los campos.</div>";
@@ -115,20 +128,6 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 </div>
-
-<?php if ($registroExitoso): ?>
-<div class="modal fade" id="modalExito" tabindex="-1" data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-body text-center p-4">
-                <h4 class="mb-3">Cuenta creada con exito</h4>
-                <p>Tu cuenta ha sido registrada correctamente.</p>
-                <a href="login.php" class="btn btn-dark px-4">Iniciar sesión</a>
-            </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 </div>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
