@@ -1,5 +1,5 @@
 
--- ejecuta este script para crear el usuario administrador
+-- ejecuta este script para crear el usuario administrador con un correo existente en tu bd
 
 UPDATE usuarios
 SET rol = 'administrador', estado = 'activo'
